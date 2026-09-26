@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
+import { Pencil, RotateCcw, Wrench } from 'lucide-react'
 import type { VehicleDTO } from '@/server/modules/vehicles/service'
 import { setVehicleStatusAction } from '@/app/actions/vehicles'
 
@@ -42,8 +43,9 @@ export function VehicleRowActions({
           type="button"
           onClick={() => change(vehicle.status === 'MAINTENANCE' ? 'AVAILABLE' : 'MAINTENANCE')}
           disabled={pending}
-          className="rounded-md border border-line px-2.5 py-1 text-sm hover:bg-wash disabled:opacity-60"
+          className="btn-quiet"
         >
+          <Wrench className="size-3.5" strokeWidth={1.75} aria-hidden="true" />
           {vehicle.status === 'MAINTENANCE' ? 'Back in service' : 'Send to service'}
         </button>
       ) : null}
@@ -53,16 +55,18 @@ export function VehicleRowActions({
           type="button"
           onClick={() => change('AVAILABLE')}
           disabled={pending}
-          className="rounded-md border border-line px-2.5 py-1 text-sm hover:bg-wash disabled:opacity-60"
+          className="btn-quiet"
         >
+          <RotateCcw className="size-3.5" strokeWidth={1.75} aria-hidden="true" />
           Return to fleet
         </button>
       ) : null}
 
       <Link
         href={`/fleet/${vehicle.id}`}
-        className="rounded-md border border-line px-2.5 py-1 text-sm hover:bg-wash"
+        className="btn-quiet"
       >
+        <Pencil className="size-3.5" strokeWidth={1.75} aria-hidden="true" />
         Edit
       </Link>
     </div>

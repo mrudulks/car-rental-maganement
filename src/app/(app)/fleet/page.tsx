@@ -1,15 +1,24 @@
 import Link from 'next/link'
+import { CarFront, Plus, Search, SlidersHorizontal } from 'lucide-react'
 import { requireAuth } from '@/server/auth/dal'
 import { can } from '@/server/auth/permissions'
 import { listVehicles } from '@/server/modules/vehicles/service'
 import { CATEGORIES, CATEGORY_LABELS } from '@/server/modules/vehicles/schema'
 import type { VehicleCategory, VehicleStatus } from '@/generated/prisma/enums'
-import { Plate, StatusPill } from '@/components/ui'
+import { Plate, StatusPill, formatMoney } from '@/components/ui'
+import { VehicleIcon } from '@/components/vehicle-icon'
+import { EmptyState, PageHeader, TableShell, Th, Tr } from '@/components/layout'
 import { VehicleRowActions } from './row-actions'
 
 export const metadata = { title: 'Fleet — Fleetdesk' }
 
 const STATUSES: VehicleStatus[] = ['AVAILABLE', 'RENTED', 'MAINTENANCE', 'RETIRED']
+const STATUS_LABELS: Record<VehicleStatus, string> = {
+  AVAILABLE: 'Available',
+  RENTED: 'On rent',
+  MAINTENANCE: 'In service',
+  RETIRED: 'Retired',
+}
 
 export default async function FleetPage(props: PageProps<'/fleet'>) {
   const auth = await requireAuth()
@@ -25,77 +34,67 @@ export default async function FleetPage(props: PageProps<'/fleet'>) {
   const search = one(sp.q) ?? ''
   const page = Number(one(sp.page) ?? '1') || 1
 
-  const { vehicles, total, pageCount } = await listVehicles(auth, {
-    status,
-    category,
-    search,
-    page,
-  })
+  const { vehicles, total, pageCount } = await listVehicles(auth, { status, category, search, page })
 
   const mayAdd = can(auth.user.role, 'vehicle:setRates')
   const filtering = Boolean(status || category || search)
 
   return (
     <div>
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Fleet</h1>
-          <p className="mt-1 text-[15px] text-muted">
-            {total} {total === 1 ? 'vehicle' : 'vehicles'}
-            {filtering ? ' matching' : ' in your fleet'}
-          </p>
-        </div>
-        {mayAdd ? (
-          <Link
-            href="/fleet/new"
-            className="rounded-md bg-plate px-4 py-2 text-[15px] font-semibold text-ink hover:bg-plate-dark"
-          >
-            Add a vehicle
-          </Link>
-        ) : null}
-      </div>
+      <PageHeader
+        title="Fleet"
+        meta={`${total} ${total === 1 ? 'vehicle' : 'vehicles'}${filtering ? ' matching' : ' in your fleet'}`}
+        action={
+          mayAdd ? (
+            <Link href="/fleet/new" className="btn-primary">
+              <Plus className="size-4" strokeWidth={2} />
+              Add a vehicle
+            </Link>
+          ) : null
+        }
+      />
 
-      <form method="get" className="mt-6 flex flex-wrap items-end gap-3">
+      <form
+        method="get"
+        className="mt-6 flex flex-wrap items-end gap-3 rounded-xl border border-line bg-paper p-3"
+      >
         <div className="w-full sm:w-auto sm:min-w-56 sm:flex-1">
-          <label htmlFor="q" className="mb-1.5 block text-sm font-medium text-ink">
+          <label htmlFor="q" className="field-label">
             Search
           </label>
-          <input
-            id="q"
-            name="q"
-            defaultValue={search}
-            placeholder="Registration, make or model"
-            className="w-full rounded-md border border-line bg-paper px-3 py-2 text-[15px]"
-          />
+          <div className="relative">
+            <Search
+              className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted"
+              strokeWidth={1.75}
+              aria-hidden="true"
+            />
+            <input
+              id="q"
+              name="q"
+              defaultValue={search}
+              placeholder="Registration, make or model"
+              className="field-control pl-9"
+            />
+          </div>
         </div>
         <div>
-          <label htmlFor="status" className="mb-1.5 block text-sm font-medium text-ink">
+          <label htmlFor="status" className="field-label">
             Status
           </label>
-          <select
-            id="status"
-            name="status"
-            defaultValue={status ?? ''}
-            className="rounded-md border border-line bg-paper px-3 py-2 text-[15px]"
-          >
+          <select id="status" name="status" defaultValue={status ?? ''} className="field-control">
             <option value="">Any</option>
             {STATUSES.map((s) => (
               <option key={s} value={s}>
-                {s === 'RENTED' ? 'On rent' : s === 'MAINTENANCE' ? 'In service' : s === 'AVAILABLE' ? 'Available' : 'Retired'}
+                {STATUS_LABELS[s]}
               </option>
             ))}
           </select>
         </div>
         <div>
-          <label htmlFor="category" className="mb-1.5 block text-sm font-medium text-ink">
+          <label htmlFor="category" className="field-label">
             Type
           </label>
-          <select
-            id="category"
-            name="category"
-            defaultValue={category ?? ''}
-            className="rounded-md border border-line bg-paper px-3 py-2 text-[15px]"
-          >
+          <select id="category" name="category" defaultValue={category ?? ''} className="field-control">
             <option value="">Any</option>
             {CATEGORIES.map((c) => (
               <option key={c} value={c}>
@@ -104,10 +103,8 @@ export default async function FleetPage(props: PageProps<'/fleet'>) {
             ))}
           </select>
         </div>
-        <button
-          type="submit"
-          className="rounded-md border border-line bg-paper px-4 py-2 text-[15px] font-medium hover:bg-wash"
-        >
+        <button type="submit" className="btn-quiet py-2">
+          <SlidersHorizontal className="size-4" strokeWidth={1.75} aria-hidden="true" />
           Apply
         </button>
         {filtering ? (
@@ -118,30 +115,52 @@ export default async function FleetPage(props: PageProps<'/fleet'>) {
       </form>
 
       {vehicles.length === 0 ? (
-        <EmptyState filtering={filtering} mayAdd={mayAdd} />
+        <div className="mt-6">
+          <EmptyState
+            icon={<CarFront className="size-5" strokeWidth={1.75} />}
+            title={filtering ? 'No vehicles match those filters' : 'Add your first vehicle'}
+            body={
+              filtering
+                ? 'Try a different search, or clear the filters to see the whole fleet.'
+                : 'Once a vehicle is on the board you can take bookings against it and hand over keys.'
+            }
+            action={
+              filtering ? (
+                <Link href="/fleet" className="btn-quiet py-2">
+                  Clear filters
+                </Link>
+              ) : mayAdd ? (
+                <Link href="/fleet/new" className="btn-primary">
+                  <Plus className="size-4" strokeWidth={2} />
+                  Add a vehicle
+                </Link>
+              ) : null
+            }
+          />
+        </div>
       ) : (
         <>
-          <div className="mt-6 relative overflow-x-auto rounded-lg border border-line bg-paper">
-            <table className="w-full min-w-[46rem] text-left text-[15px]">
-              <thead className="border-b border-line text-sm text-muted">
+          <div className="mt-6">
+            <TableShell>
+              <thead>
                 <tr>
-                  <th scope="col" className="px-4 py-2.5 font-medium">Vehicle</th>
-                  <th scope="col" className="px-4 py-2.5 font-medium">Type</th>
-                  <th scope="col" className="px-4 py-2.5 font-medium">Status</th>
-                  <th scope="col" className="px-4 py-2.5 text-right font-medium">Per day</th>
-                  <th scope="col" className="px-4 py-2.5 text-right font-medium">Odometer</th>
-                  <th scope="col" className="px-4 py-2.5">
+                  <Th>Vehicle</Th>
+                  <Th>Type</Th>
+                  <Th>Status</Th>
+                  <Th align="right">Per day</Th>
+                  <Th align="right">Odometer</Th>
+                  <Th align="right">
                     <span className="sr-only">Actions</span>
-                  </th>
+                  </Th>
                 </tr>
               </thead>
               <tbody>
                 {vehicles.map((v) => (
-                  <tr key={v.id} className="border-b border-line last:border-0">
+                  <Tr key={v.id}>
                     <td className="px-4 py-3">
                       <Link href={`/fleet/${v.id}`} className="inline-flex items-center gap-2.5">
                         <Plate>{v.registrationNumber}</Plate>
-                        <span className="font-medium whitespace-nowrap underline-offset-4 hover:underline">
+                        <span className="font-medium whitespace-nowrap text-ink underline-offset-4 hover:underline">
                           {v.make} {v.model}
                         </span>
                       </Link>
@@ -149,24 +168,26 @@ export default async function FleetPage(props: PageProps<'/fleet'>) {
                         <span className="ml-2 whitespace-nowrap text-sm text-muted">{v.year}</span>
                       ) : null}
                     </td>
-                    <td className="px-4 py-3 text-muted">{CATEGORY_LABELS[v.category]}</td>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex items-center gap-2 text-muted">
+                        <VehicleIcon category={v.category} />
+                        {CATEGORY_LABELS[v.category]}
+                      </span>
+                    </td>
                     <td className="px-4 py-3">
                       <StatusPill status={v.status} />
                     </td>
-                    <td className="px-4 py-3 text-right">₹{v.dailyRate}</td>
-                    <td className="px-4 py-3 text-right text-muted">
+                    <td className="px-4 py-3 text-right tabular-nums">{formatMoney(v.dailyRate)}</td>
+                    <td className="px-4 py-3 text-right tabular-nums text-muted">
                       {v.odometer.toLocaleString('en-IN')} km
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <VehicleRowActions
-                        vehicle={v}
-                        canRetire={can(auth.user.role, 'vehicle:delete')}
-                      />
+                      <VehicleRowActions vehicle={v} canRetire={can(auth.user.role, 'vehicle:delete')} />
                     </td>
-                  </tr>
+                  </Tr>
                 ))}
               </tbody>
-            </table>
+            </TableShell>
           </div>
 
           {pageCount > 1 ? (
@@ -202,7 +223,7 @@ function PageLink({
   children: React.ReactNode
 }) {
   if (disabled) {
-    return <span className="rounded-md border border-line px-3 py-1.5 text-muted/60">{children}</span>
+    return <span className="rounded-lg border border-line px-3 py-1.5 text-muted/60">{children}</span>
   }
   const params = new URLSearchParams()
   for (const [k, v] of Object.entries(sp)) {
@@ -210,39 +231,8 @@ function PageLink({
   }
   params.set('page', String(page))
   return (
-    <Link
-      href={`/fleet?${params}`}
-      className="rounded-md border border-line bg-paper px-3 py-1.5 hover:bg-wash"
-    >
+    <Link href={`/fleet?${params}`} className="btn-quiet py-1.5">
       {children}
     </Link>
-  )
-}
-
-function EmptyState({ filtering, mayAdd }: { filtering: boolean; mayAdd: boolean }) {
-  return (
-    <div className="mt-6 rounded-lg border border-dashed border-line bg-paper px-6 py-12 text-center">
-      <h2 className="text-lg font-semibold tracking-tight">
-        {filtering ? 'No vehicles match those filters' : 'Add your first vehicle'}
-      </h2>
-      <p className="mx-auto mt-2 max-w-md text-[15px] text-muted">
-        {filtering
-          ? 'Try a different search, or clear the filters to see the whole fleet.'
-          : 'Once a vehicle is on the board you can take bookings against it and hand over keys.'}
-      </p>
-      {!filtering && mayAdd ? (
-        <Link
-          href="/fleet/new"
-          className="mt-5 inline-block rounded-md bg-plate px-4 py-2 text-[15px] font-semibold text-ink hover:bg-plate-dark"
-        >
-          Add a vehicle
-        </Link>
-      ) : null}
-      {filtering ? (
-        <Link href="/fleet" className="mt-5 block text-[15px] underline underline-offset-4">
-          Clear filters
-        </Link>
-      ) : null}
-    </div>
   )
 }

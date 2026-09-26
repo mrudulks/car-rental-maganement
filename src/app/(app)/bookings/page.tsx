@@ -1,9 +1,11 @@
 import Link from 'next/link'
+import { ArrowRight, CalendarPlus, Plus, Search, SlidersHorizontal, Ticket } from 'lucide-react'
 import { requireAuth } from '@/server/auth/dal'
 import { can } from '@/server/auth/permissions'
 import { listBookings } from '@/server/modules/bookings/service'
 import type { BookingStatus } from '@/generated/prisma/enums'
 import { Plate, formatMoney } from '@/components/ui'
+import { EmptyState, PageHeader, TableShell, Th, Tr } from '@/components/layout'
 import {
   BOOKING_STATUSES,
   BOOKING_STATUS_LABELS,
@@ -30,46 +32,48 @@ export default async function BookingsPage(props: PageProps<'/bookings'>) {
 
   return (
     <div>
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Bookings</h1>
-          <p className="mt-1 text-[15px] text-muted">
-            {total} {total === 1 ? 'booking' : 'bookings'}
-            {filtering ? ' matching' : ''}
-          </p>
-        </div>
-        {can(auth.user.role, 'booking:write') ? (
-          <Link
-            href="/bookings/new"
-            className="rounded-md bg-plate px-4 py-2 text-[15px] font-semibold text-ink hover:bg-plate-dark"
-          >
-            New booking
-          </Link>
-        ) : null}
-      </div>
+      <PageHeader
+        title="Bookings"
+        meta={`${total} ${total === 1 ? 'booking' : 'bookings'}${filtering ? ' matching' : ''}`}
+        action={
+          can(auth.user.role, 'booking:write') ? (
+            <Link href="/bookings/new" className="btn-primary">
+              <Plus className="size-4" strokeWidth={2} />
+              New booking
+            </Link>
+          ) : null
+        }
+      />
 
-      <form method="get" className="mt-6 flex flex-wrap items-end gap-3">
+      <form method="get" className="mt-6 flex flex-wrap items-end gap-3 rounded-xl border border-line bg-paper p-3">
         <div className="w-full sm:w-auto sm:min-w-56 sm:flex-1">
-          <label htmlFor="q" className="mb-1.5 block text-sm font-medium text-ink">
+          <label htmlFor="q" className="field-label">
             Search
           </label>
-          <input
-            id="q"
-            name="q"
-            defaultValue={search}
-            placeholder="Booking number, customer, phone or plate"
-            className="w-full rounded-md border border-line bg-paper px-3 py-2 text-[15px]"
-          />
+          <div className="relative">
+            <Search
+              className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted"
+              strokeWidth={1.75}
+              aria-hidden="true"
+            />
+            <input
+              id="q"
+              name="q"
+              defaultValue={search}
+              placeholder="Booking number, customer, phone or plate"
+              className="field-control pl-9"
+            />
+          </div>
         </div>
         <div>
-          <label htmlFor="status" className="mb-1.5 block text-sm font-medium text-ink">
+          <label htmlFor="status" className="field-label">
             Status
           </label>
           <select
             id="status"
             name="status"
             defaultValue={status ?? ''}
-            className="rounded-md border border-line bg-paper px-3 py-2 text-[15px]"
+            className="field-control"
           >
             <option value="">Any</option>
             {BOOKING_STATUSES.map((s) => (
@@ -79,10 +83,8 @@ export default async function BookingsPage(props: PageProps<'/bookings'>) {
             ))}
           </select>
         </div>
-        <button
-          type="submit"
-          className="rounded-md border border-line bg-paper px-4 py-2 text-[15px] font-medium hover:bg-wash"
-        >
+        <button type="submit" className="btn-quiet py-2">
+          <SlidersHorizontal className="size-4" strokeWidth={1.75} aria-hidden="true" />
           Apply
         </button>
         {filtering ? (
@@ -93,36 +95,45 @@ export default async function BookingsPage(props: PageProps<'/bookings'>) {
       </form>
 
       {bookings.length === 0 ? (
-        <div className="mt-6 rounded-lg border border-dashed border-line bg-paper px-6 py-12 text-center">
-          <h2 className="text-lg font-semibold tracking-tight">
-            {filtering ? 'No bookings match' : 'No bookings yet'}
-          </h2>
-          <p className="mx-auto mt-2 max-w-md text-[15px] text-muted">
-            {filtering
-              ? 'Try a different search, or clear the filters.'
-              : 'Reserve a vehicle for a customer and it will show up here.'}
-          </p>
+        <div className="mt-6">
+          <EmptyState
+            icon={<Ticket className="size-5" strokeWidth={1.75} />}
+            title={filtering ? 'No bookings match' : 'No bookings yet'}
+            body={
+              filtering
+                ? 'Try a different search, or clear the filters.'
+                : 'Reserve a vehicle for a customer and it will show up here.'
+            }
+            action={
+              !filtering && can(auth.user.role, 'booking:write') ? (
+                <Link href="/bookings/new" className="btn-primary">
+                  <CalendarPlus className="size-4" strokeWidth={2} />
+                  Take a booking
+                </Link>
+              ) : null
+            }
+          />
         </div>
       ) : (
         <>
-          <div className="mt-6 relative overflow-x-auto rounded-lg border border-line bg-paper">
-            <table className="w-full min-w-[46rem] text-left text-[15px]">
-              <thead className="border-b border-line text-sm text-muted">
+          <div className="mt-6">
+            <TableShell>
+              <thead>
                 <tr>
-                  <th scope="col" className="px-4 py-2.5 font-medium">Booking</th>
-                  <th scope="col" className="px-4 py-2.5 font-medium">Vehicle</th>
-                  <th scope="col" className="px-4 py-2.5 font-medium">Customer</th>
-                  <th scope="col" className="px-4 py-2.5 font-medium">Dates</th>
-                  <th scope="col" className="px-4 py-2.5 font-medium">Status</th>
-                  <th scope="col" className="px-4 py-2.5 text-right font-medium">Total</th>
-                  <th scope="col" className="px-4 py-2.5">
+                  <Th>Booking</Th>
+                  <Th>Vehicle</Th>
+                  <Th>Customer</Th>
+                  <Th>Dates</Th>
+                  <Th>Status</Th>
+                  <Th align="right">Total</Th>
+                  <Th align="right">
                     <span className="sr-only">Next step</span>
-                  </th>
+                  </Th>
                 </tr>
               </thead>
               <tbody>
                 {bookings.map((b) => (
-                  <tr key={b.id} className="border-b border-line last:border-0">
+                  <Tr key={b.id}>
                     <td className="px-4 py-3">
                       <Link
                         href={`/bookings/${b.id}`}
@@ -132,9 +143,11 @@ export default async function BookingsPage(props: PageProps<'/bookings'>) {
                       </Link>
                     </td>
                     <td className="px-4 py-3">
-                      <Plate>{b.vehicle.registrationNumber}</Plate>
-                      <span className="ml-2.5 whitespace-nowrap text-muted">
-                        {b.vehicle.make} {b.vehicle.model}
+                      <span className="inline-flex items-center gap-2.5">
+                        <Plate>{b.vehicle.registrationNumber}</Plate>
+                        <span className="whitespace-nowrap text-muted">
+                          {b.vehicle.make} {b.vehicle.model}
+                        </span>
                       </span>
                     </td>
                     <td className="px-4 py-3">
@@ -147,29 +160,31 @@ export default async function BookingsPage(props: PageProps<'/bookings'>) {
                     <td className="px-4 py-3">
                       <BookingStatusPill status={b.status} />
                     </td>
-                    <td className="px-4 py-3 text-right">{formatMoney(b.estimatedTotal)}</td>
+                    <td className="px-4 py-3 text-right tabular-nums">{formatMoney(b.estimatedTotal)}</td>
                     <td className="px-4 py-3 text-right whitespace-nowrap">
                       {mayHandle && b.status === 'RESERVED' ? (
                         <Link
                           href={`/bookings/${b.id}/check-out`}
-                          className="rounded-md border border-line px-2.5 py-1 text-sm hover:bg-wash"
+                          className="btn-quiet"
                         >
                           Hand over
+                          <ArrowRight className="size-3.5" strokeWidth={2} aria-hidden="true" />
                         </Link>
                       ) : null}
                       {mayHandle && b.status === 'ACTIVE' ? (
                         <Link
                           href={`/bookings/${b.id}/check-in`}
-                          className="rounded-md border border-line px-2.5 py-1 text-sm hover:bg-wash"
+                          className="btn-quiet"
                         >
                           Take back
+                          <ArrowRight className="size-3.5" strokeWidth={2} aria-hidden="true" />
                         </Link>
                       ) : null}
                     </td>
-                  </tr>
+                  </Tr>
                 ))}
               </tbody>
-            </table>
+            </TableShell>
           </div>
 
           {pageCount > 1 ? (

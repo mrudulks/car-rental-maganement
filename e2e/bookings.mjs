@@ -47,9 +47,9 @@ const END = local(43, 18)
 
 const owner = await signIn('owner@sunrise.test')
 
-// The seed leaves one future reservation.
+// The seed leaves two rentals out and two reservations.
 await owner.goto(`${BASE}/bookings`, { waitUntil: 'networkidle' })
-check('bookings list shows the seeded bookings', await owner.locator('tbody tr').count(), 3)
+check('bookings list shows the seeded bookings', await owner.locator('tbody tr').count(), 4)
 await shot(owner, '20-bookings-list')
 
 // Availability for a free window.

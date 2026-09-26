@@ -92,11 +92,12 @@ async function seedOrg(opts: {
     ].map((c) => prisma.customer.create({ data: { ...c, organizationId: org.id } })),
   )
 
-  // Two vehicles are out on rent right now, so the dashboard has something to show.
+  // A realistic working day: one rental already late, one due back this evening, and
+  // (below) one waiting to be collected today. Without this the dashboard looks idle.
   const live: Array<[number, number, number, number]> = [
     // [vehicleIndex, customerIndex, startDayOffset, endDayOffset]
-    [1, 0, -2, 0],
-    [2, 1, -1, 2],
+    [1, 0, -3, -1], // overdue since yesterday
+    [2, 1, -1, 0], // due back today
   ]
 
   for (const [vi, ci, from, to] of live) {
@@ -127,24 +128,35 @@ async function seedOrg(opts: {
   // One vehicle is off the road.
   await prisma.vehicle.update({ where: { id: vehicles[3]!.id }, data: { status: 'MAINTENANCE' } })
 
-  // And one future reservation.
-  await prisma.booking.create({
-    data: {
-      organizationId: org.id,
-      branchId: branch.id,
-      vehicleId: vehicles[0]!.id,
-      customerId: customers[2]!.id,
-      bookingNumber: 'BK-2000',
-      status: 'RESERVED',
-      startAt: at(3, 9),
-      endAt: at(6, 18),
-      rateType: 'DAILY',
-      ratePerUnit: vehicles[0]!.dailyRate,
-      estimatedTotal: String(Number(vehicles[0]!.dailyRate) * 3),
-      depositAmount: '5000.00',
-      createdByUserId: owner.id,
-    },
-  })
+  // One waiting to be collected today, and one further out this week.
+  const reserved: Array<[number, number, number, number, string]> = [
+    [0, 2, 0, 2, 'BK-2000'], // collected today
+    [4, 0, 4, 6, 'BK-2001'], // later this week
+  ]
+
+  for (const [vi, ci, from, to, number] of reserved) {
+    const vehicle = vehicles[vi]!
+    await prisma.booking.create({
+      data: {
+        organizationId: org.id,
+        branchId: branch.id,
+        vehicleId: vehicle.id,
+        customerId: customers[ci]!.id,
+        bookingNumber: number,
+        status: 'RESERVED',
+        startAt: at(from, 9),
+        endAt: at(to, 18),
+        rateType: 'DAILY',
+        ratePerUnit: vehicle.dailyRate,
+        estimatedTotal: String(Number(vehicle.dailyRate) * (to - from)),
+        depositAmount: '5000.00',
+        createdByUserId: owner.id,
+      },
+    })
+  }
+
+  // Keep the per-tenant booking counter ahead of the numbers we just assigned.
+  await prisma.organization.update({ where: { id: org.id }, data: { bookingSeq: 10 } })
 
   console.log(`  ${opts.name}: ${opts.ownerEmail} / ${PASSWORD}`)
 }

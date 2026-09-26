@@ -3,7 +3,9 @@
 import { useActionState } from 'react'
 import Link from 'next/link'
 import type { BookingFormState } from '@/app/actions/bookings'
+import { ClipboardCheck } from 'lucide-react'
 import { Button, Field, FormError } from '@/components/ui'
+import { Card } from '@/components/layout'
 
 const EMPTY: BookingFormState = {}
 
@@ -30,7 +32,12 @@ export function HandoverForm({
     <form action={formAction} className="mt-8 space-y-6" noValidate>
       {state.error ? <FormError>{state.error}</FormError> : null}
 
-      <div className="grid gap-5 sm:grid-cols-2">
+      <Card
+        title="Readings"
+        description={mode === 'out' ? 'What the vehicle shows as it leaves.' : 'What the vehicle shows as it comes back.'}
+        icon={<ClipboardCheck className="size-[18px]" strokeWidth={1.75} />}
+      >
+      <div className="grid gap-5 px-5 py-5 sm:grid-cols-2">
         <Field
           label="Odometer (km)"
           name="odometer"
@@ -53,6 +60,7 @@ export function HandoverForm({
         />
       </div>
 
+      <div className="border-t border-line px-5 py-5 space-y-5">
       <Field
         label={mode === 'out' ? 'Notes at hand-over (optional)' : 'Notes on return (optional)'}
         name="notes"
@@ -62,7 +70,7 @@ export function HandoverForm({
 
       {mode === 'in' ? (
         <div>
-          <label htmlFor="field-damageNotes" className="mb-1.5 block text-sm font-medium text-ink">
+          <label htmlFor="field-damageNotes" className="field-label">
             Damage (optional)
           </label>
           <textarea
@@ -71,15 +79,17 @@ export function HandoverForm({
             rows={3}
             defaultValue={state.values?.damageNotes}
             placeholder="Anything new since it went out — dents, scratches, missing items."
-            className="w-full rounded-md border border-line bg-paper px-3 py-2 text-[15px] text-ink placeholder:text-muted/70"
+            className="field-control"
           />
           {state.fieldErrors?.damageNotes ? (
             <p className="mt-1.5 text-sm text-danger">{state.fieldErrors.damageNotes}</p>
           ) : null}
         </div>
       ) : null}
+      </div>
+      </Card>
 
-      <div className="flex items-center gap-3 border-t border-line pt-6">
+      <div className="flex items-center gap-3">
         <Button type="submit" disabled={pending}>
           {pending ? 'Saving…' : submitLabel}
         </Button>

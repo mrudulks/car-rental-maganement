@@ -1,8 +1,10 @@
 import Link from 'next/link'
+import { CalendarPlus, Search, Users } from 'lucide-react'
 import { requireAuth } from '@/server/auth/dal'
 import { can } from '@/server/auth/permissions'
 import { listCustomers } from '@/server/modules/customers/service'
 import { NoAccess } from '@/components/no-access'
+import { EmptyState, PageHeader, TableShell, Th, Tr } from '@/components/layout'
 
 export const metadata = { title: 'Customers — Fleetdesk' }
 
@@ -21,31 +23,33 @@ export default async function CustomersPage(props: PageProps<'/customers'>) {
 
   return (
     <div>
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Customers</h1>
-        <p className="mt-1 text-[15px] text-muted">
-          {total} {total === 1 ? 'customer' : 'customers'}
-          {search ? ' matching' : ' on record'}
-        </p>
-      </div>
+      <PageHeader
+        title="Customers"
+        meta={`${total} ${total === 1 ? 'customer' : 'customers'}${search ? ' matching' : ' on record'}`}
+      />
 
-      <form method="get" className="mt-6 flex flex-wrap items-end gap-3">
+      <form method="get" className="mt-6 flex flex-wrap items-end gap-3 rounded-xl border border-line bg-paper p-3">
         <div className="w-full sm:w-auto sm:min-w-56 sm:flex-1">
-          <label htmlFor="q" className="mb-1.5 block text-sm font-medium text-ink">
+          <label htmlFor="q" className="field-label">
             Search
           </label>
-          <input
-            id="q"
-            name="q"
-            defaultValue={search}
-            placeholder="Name, phone or licence number"
-            className="w-full rounded-md border border-line bg-paper px-3 py-2 text-[15px]"
-          />
+          <div className="relative">
+            <Search
+              className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted"
+              strokeWidth={1.75}
+              aria-hidden="true"
+            />
+            <input
+              id="q"
+              name="q"
+              defaultValue={search}
+              placeholder="Name, phone or licence number"
+              className="field-control pl-9"
+            />
+          </div>
         </div>
-        <button
-          type="submit"
-          className="rounded-md border border-line bg-paper px-4 py-2 text-[15px] font-medium hover:bg-wash"
-        >
+        <button type="submit" className="btn-quiet py-2">
+          <Search className="size-4" strokeWidth={1.75} aria-hidden="true" />
           Search
         </button>
         {search ? (
@@ -56,40 +60,41 @@ export default async function CustomersPage(props: PageProps<'/customers'>) {
       </form>
 
       {customers.length === 0 ? (
-        <div className="mt-6 rounded-lg border border-dashed border-line bg-paper px-6 py-12 text-center">
-          <h2 className="text-lg font-semibold tracking-tight">
-            {search ? 'No customers match' : 'No customers yet'}
-          </h2>
-          <p className="mx-auto mt-2 max-w-md text-[15px] text-muted">
-            {search
-              ? 'Try a different name, phone number or licence.'
-              : 'Customers are added as you take bookings — there is nothing to fill in here first.'}
-          </p>
-          {!search && can(auth.user.role, 'booking:write') ? (
-            <Link
-              href="/bookings/new"
-              className="mt-5 inline-block rounded-md bg-plate px-4 py-2 text-[15px] font-semibold text-ink hover:bg-plate-dark"
-            >
-              Take a booking
-            </Link>
-          ) : null}
+        <div className="mt-6">
+          <EmptyState
+            icon={<Users className="size-5" strokeWidth={1.75} />}
+            title={search ? 'No customers match' : 'No customers yet'}
+            body={
+              search
+                ? 'Try a different name, phone number or licence.'
+                : 'Customers are added as you take bookings — there is nothing to fill in here first.'
+            }
+            action={
+              !search && can(auth.user.role, 'booking:write') ? (
+                <Link href="/bookings/new" className="btn-primary">
+                  <CalendarPlus className="size-4" strokeWidth={2} />
+                  Take a booking
+                </Link>
+              ) : null
+            }
+          />
         </div>
       ) : (
         <>
-          <div className="mt-6 relative overflow-x-auto rounded-lg border border-line bg-paper">
-            <table className="w-full min-w-[46rem] text-left text-[15px]">
-              <thead className="border-b border-line text-sm text-muted">
+          <div className="mt-6">
+            <TableShell>
+              <thead>
                 <tr>
-                  <th scope="col" className="px-4 py-2.5 font-medium">Name</th>
-                  <th scope="col" className="px-4 py-2.5 font-medium">Phone</th>
-                  <th scope="col" className="px-4 py-2.5 font-medium">Licence</th>
-                  <th scope="col" className="px-4 py-2.5 text-right font-medium">Rentals</th>
-                  <th scope="col" className="px-4 py-2.5 font-medium">Last rental</th>
+                  <Th>Name</Th>
+                  <Th>Phone</Th>
+                  <Th>Licence</Th>
+                  <Th align="right">Rentals</Th>
+                  <Th>Last rental</Th>
                 </tr>
               </thead>
               <tbody>
                 {customers.map((c) => (
-                  <tr key={c.id} className="border-b border-line last:border-0">
+                  <Tr key={c.id}>
                     <td className="px-4 py-3">
                       <Link
                         href={`/customers/${c.id}`}
@@ -100,7 +105,7 @@ export default async function CustomersPage(props: PageProps<'/customers'>) {
                     </td>
                     <td className="px-4 py-3">{c.phone}</td>
                     <td className="px-4 py-3 text-muted">{c.licenceNumber ?? '—'}</td>
-                    <td className="px-4 py-3 text-right">{c.bookingCount}</td>
+                    <td className="px-4 py-3 text-right tabular-nums">{c.bookingCount}</td>
                     <td className="px-4 py-3 text-muted">
                       {c.lastRentalAt
                         ? c.lastRentalAt.toLocaleDateString('en-IN', {
@@ -110,10 +115,10 @@ export default async function CustomersPage(props: PageProps<'/customers'>) {
                           })
                         : '—'}
                     </td>
-                  </tr>
+                  </Tr>
                 ))}
               </tbody>
-            </table>
+            </TableShell>
           </div>
 
           {pageCount > 1 ? (

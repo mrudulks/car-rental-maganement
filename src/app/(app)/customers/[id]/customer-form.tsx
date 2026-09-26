@@ -3,7 +3,9 @@
 import { useActionState } from 'react'
 import { updateCustomerAction, type CustomerFormState } from '@/app/actions/customers'
 import type { CustomerDTO } from '@/server/modules/customers/service'
+import { UserRound } from 'lucide-react'
 import { Button, Field, FormError } from '@/components/ui'
+import { Card } from '@/components/layout'
 
 const EMPTY: CustomerFormState = {}
 
@@ -18,7 +20,12 @@ export function CustomerForm({ customer }: { customer: CustomerDTO }) {
     <form action={formAction} className="space-y-5" noValidate>
       {state.error ? <FormError>{state.error}</FormError> : null}
 
-      <div className="grid gap-5 sm:grid-cols-2">
+      <Card
+        title="Details"
+        description="Kept for this rental desk only."
+        icon={<UserRound className="size-[18px]" strokeWidth={1.75} />}
+      >
+      <div className="grid gap-5 px-5 py-5 sm:grid-cols-2">
         <Field
           label="Name"
           name="fullName"
@@ -48,14 +55,17 @@ export function CustomerForm({ customer }: { customer: CustomerDTO }) {
         />
       </div>
 
-      <Field
-        label="Address"
-        name="address"
-        defaultValue={val('address')}
-        error={state.fieldErrors?.address}
-      />
+      <div className="border-t border-line px-5 py-5">
+        <Field
+          label="Address"
+          name="address"
+          defaultValue={val('address')}
+          error={state.fieldErrors?.address}
+        />
+      </div>
+      </Card>
 
-      <div className="border-t border-line pt-5">
+      <div>
         <Button type="submit" disabled={pending}>
           {pending ? 'Saving…' : 'Save changes'}
         </Button>

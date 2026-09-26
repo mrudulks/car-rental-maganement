@@ -14,6 +14,10 @@
   --color-paper: #ffffff;
   --color-wash: #eff1f0;
   --color-line: #d3d9d8;
+  /* A barely-there fill for table headers and row hovers: enough to give a dense table
+     rhythm without drawing a second border around everything. */
+  --color-fill: #f4f6f6;
+  --color-fill-strong: #e8ecec;
   --color-plate: #f2c230;
   --color-plate-dark: #d9a715;
   --color-available: #1f7a5a;
@@ -56,5 +60,84 @@ body {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/*
+  Buttons and links that act as buttons share these, so an action looks the same
+  whether it is an <a> or a <button>. Icons sit inline at the same optical size.
+*/
+@layer components {
+  .btn-primary,
+  .btn-quiet,
+  .btn-danger {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-radius: 0.5rem;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1.2;
+    padding: 0.5rem 0.9rem;
+    white-space: nowrap;
+    transition: background-color 120ms ease, border-color 120ms ease;
+  }
+
+  .btn-primary {
+    background: var(--color-plate);
+    color: var(--color-ink);
+  }
+  .btn-primary:hover {
+    background: var(--color-plate-dark);
+  }
+
+  .btn-quiet {
+    border: 1px solid var(--color-line);
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font-weight: 500;
+    padding: 0.35rem 0.7rem;
+    font-size: 0.875rem;
+  }
+  .btn-quiet:hover {
+    background: var(--color-fill);
+  }
+
+  .btn-danger {
+    border: 1px solid color-mix(in srgb, var(--color-danger) 40%, transparent);
+    color: var(--color-danger);
+    background: var(--color-paper);
+    font-weight: 500;
+  }
+  .btn-danger:hover {
+    background: color-mix(in srgb, var(--color-danger) 8%, transparent);
+  }
+
+  .btn-primary:disabled,
+  .btn-quiet:disabled,
+  .btn-danger:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  /* Text inputs and selects, so a <select> never looks unlike an <input>. */
+  .field-control {
+    width: 100%;
+    border-radius: 0.5rem;
+    border: 1px solid var(--color-line);
+    background: var(--color-paper);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9375rem;
+    color: var(--color-ink);
+  }
+  .field-control:hover {
+    border-color: var(--color-ink-500);
+  }
+  .field-label {
+    display: block;
+    margin-bottom: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-ink);
   }
 }

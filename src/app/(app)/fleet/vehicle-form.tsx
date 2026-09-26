@@ -6,7 +6,9 @@ import type { VehicleCategory } from '@/generated/prisma/enums'
 import { CATEGORIES, CATEGORY_FIELDS, CATEGORY_LABELS } from '@/server/modules/vehicles/schema'
 import type { VehicleDTO } from '@/server/modules/vehicles/service'
 import type { VehicleFormState } from '@/app/actions/vehicles'
+import { CircleDollarSign, Info, Settings2 } from 'lucide-react'
 import { Button, Field, FormError } from '@/components/ui'
+import { Card } from '@/components/layout'
 
 const EMPTY: VehicleFormState = {}
 
@@ -55,11 +57,14 @@ export function VehicleForm({
         <FormError>{orphanErrors.join(' ')}</FormError>
       ) : null}
 
-      <section className="space-y-5">
-        <h2 className="text-sm font-semibold text-muted">Vehicle</h2>
-
+      <Card
+        title="Vehicle"
+        description="How this vehicle appears on the fleet board."
+        icon={<Info className="size-[18px]" strokeWidth={1.75} />}
+      >
+        <div className="space-y-5 px-5 py-5">
         <div>
-          <label htmlFor="field-category" className="mb-1.5 block text-sm font-medium text-ink">
+          <label htmlFor="field-category" className="field-label">
             Type
           </label>
           <select
@@ -67,7 +72,7 @@ export function VehicleForm({
             name="category"
             value={category}
             onChange={(e) => setCategory(e.target.value as VehicleCategory)}
-            className="w-full rounded-md border border-line bg-paper px-3 py-2 text-[15px] text-ink"
+            className="field-control"
           >
             {CATEGORIES.map((c) => (
               <option key={c} value={c}>
@@ -124,20 +129,21 @@ export function VehicleForm({
             error={state.fieldErrors?.odometer}
           />
         </div>
-      </section>
+        </div>
+      </Card>
 
       {fields.length > 0 ? (
-        <section className="space-y-5">
-          <h2 className="text-sm font-semibold text-muted">{CATEGORY_LABELS[category]} details</h2>
-          <div className="grid gap-5 sm:grid-cols-2">
+        <Card
+          title={`${CATEGORY_LABELS[category]} details`}
+          description="Specifics for this kind of vehicle. Leave anything you do not track blank."
+          icon={<Settings2 className="size-[18px]" strokeWidth={1.75} />}
+        >
+          <div className="grid gap-5 px-5 py-5 sm:grid-cols-2">
             {fields.map((field) => {
               if (field.type === 'select') {
                 return (
                   <div key={field.key}>
-                    <label
-                      htmlFor={`field-${field.key}`}
-                      className="mb-1.5 block text-sm font-medium text-ink"
-                    >
+                    <label htmlFor={`field-${field.key}`} className="field-label">
                       {field.label}
                     </label>
                     <select
@@ -148,9 +154,7 @@ export function VehicleForm({
                       aria-describedby={
                         state.fieldErrors?.[field.key] ? `field-${field.key}-error` : undefined
                       }
-                      className={`w-full rounded-md border bg-paper px-3 py-2 text-[15px] text-ink ${
-                        state.fieldErrors?.[field.key] ? 'border-danger' : 'border-line'
-                      }`}
+                      className={`field-control ${state.fieldErrors?.[field.key] ? 'border-danger' : ''}`}
                     >
                       <option value="">Not set</option>
                       {field.options.map((o) => (
@@ -200,11 +204,15 @@ export function VehicleForm({
               )
             })}
           </div>
-        </section>
+        </Card>
       ) : null}
 
-      <section className="space-y-5">
-        <h2 className="text-sm font-semibold text-muted">Rates</h2>
+      <Card
+        title="Rates"
+        description="What this vehicle costs to rent, and the deposit you hold."
+        icon={<CircleDollarSign className="size-[18px]" strokeWidth={1.75} />}
+      >
+        <div className="space-y-5 px-5 py-5">
         {!canSetRates ? (
           <p className="rounded-md border border-line bg-wash px-3 py-2 text-sm text-muted">
             Rates are set by a manager or owner. You can still update the details above.
@@ -255,7 +263,8 @@ export function VehicleForm({
             <input type="hidden" name="monthlyRate" value={vehicle.monthlyRate ?? ''} />
           </>
         ) : null}
-      </section>
+        </div>
+      </Card>
 
       <div className="flex items-center gap-3 border-t border-line pt-6">
         <Button type="submit" disabled={pending}>

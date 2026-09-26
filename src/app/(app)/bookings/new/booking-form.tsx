@@ -6,7 +6,10 @@ import { createBookingAction, type BookingFormState } from '@/app/actions/bookin
 import type { AvailableVehicle } from '@/server/modules/bookings/service'
 import { quote, RATE_LABELS, RATE_TYPES, type RateTypeKey } from '@/server/modules/bookings/schema'
 import { CATEGORY_LABELS } from '@/server/modules/vehicles/schema'
+import { CarFront, ReceiptText, UserRound } from 'lucide-react'
 import { Button, Field, FormError, Plate, formatMoney } from '@/components/ui'
+import { VehicleIcon } from '@/components/vehicle-icon'
+import { Card, EmptyState } from '@/components/layout'
 
 const EMPTY: BookingFormState = {}
 
@@ -38,15 +41,17 @@ export function BookingForm({
 
   if (vehicles.length === 0) {
     return (
-      <div className="mt-6 rounded-lg border border-dashed border-line bg-paper px-6 py-12 text-center">
-        <h2 className="text-lg font-semibold tracking-tight">Nothing free for those dates</h2>
-        <p className="mx-auto mt-2 max-w-md text-[15px] text-muted">
-          Every vehicle is either booked for part of that window or off the road. Try a different
-          window, or check what is already booked.
-        </p>
-        <Link href="/bookings" className="mt-5 inline-block text-[15px] underline underline-offset-4">
-          See the bookings
-        </Link>
+      <div className="mt-6">
+        <EmptyState
+          icon={<CarFront className="size-5" strokeWidth={1.75} />}
+          title="Nothing free for those dates"
+          body="Every vehicle is either booked for part of that window or off the road. Try a different window, or check what is already booked."
+          action={
+            <Link href="/bookings" className="btn-quiet py-2">
+              See the bookings
+            </Link>
+          }
+        />
       </div>
     )
   }
@@ -58,22 +63,25 @@ export function BookingForm({
 
       {state.error ? <FormError>{state.error}</FormError> : null}
 
-      <section>
-        <h2 className="text-sm font-semibold text-muted">
-          Available vehicles ({vehicles.length})
-        </h2>
+      <Card
+        title={`Available vehicles (${vehicles.length})`}
+        description="Only vehicles free for the whole window are listed."
+        icon={<CarFront className="size-[18px]" strokeWidth={1.75} />}
+      >
         {state.fieldErrors?.vehicleId ? (
-          <p className="mt-2 text-sm text-danger">{state.fieldErrors.vehicleId}</p>
+          <p className="border-b border-line px-5 py-2.5 text-sm text-danger">
+            {state.fieldErrors.vehicleId}
+          </p>
         ) : null}
 
-        <div className="mt-3 divide-y divide-line overflow-hidden rounded-lg border border-line bg-paper">
+        <div className="divide-y divide-line">
           {vehicles.map((v) => {
             const unavailableForRate = rateFor(v, rateType) == null
             return (
               <label
                 key={v.id}
-                className={`flex cursor-pointer items-center gap-4 px-4 py-3 ${
-                  vehicleId === v.id ? 'bg-plate/12' : 'hover:bg-wash'
+                className={`flex cursor-pointer items-center gap-3.5 px-5 py-3 transition-colors ${
+                  vehicleId === v.id ? 'bg-plate/15' : 'hover:bg-fill'
                 }`}
               >
                 <input
@@ -84,8 +92,9 @@ export function BookingForm({
                   onChange={() => setVehicleId(v.id)}
                   className="size-4 accent-ink"
                 />
+                <VehicleIcon category={v.category} />
                 <Plate>{v.registrationNumber}</Plate>
-                <span className="font-medium">
+                <span className="font-medium whitespace-nowrap">
                   {v.make} {v.model}
                 </span>
                 <span className="text-muted">{CATEGORY_LABELS[v.category]}</span>
@@ -103,11 +112,14 @@ export function BookingForm({
             )
           })}
         </div>
-      </section>
+      </Card>
 
-      <section className="space-y-5">
-        <h2 className="text-sm font-semibold text-muted">Customer</h2>
-        <div className="grid gap-5 sm:grid-cols-2">
+      <Card
+        title="Customer"
+        description="A returning customer is matched on their phone number."
+        icon={<UserRound className="size-[18px]" strokeWidth={1.75} />}
+      >
+        <div className="grid gap-5 px-5 py-5 sm:grid-cols-2">
           <Field
             label="Name"
             name="customerName"
@@ -132,13 +144,16 @@ export function BookingForm({
             error={state.fieldErrors?.customerLicence}
           />
         </div>
-      </section>
+      </Card>
 
-      <section className="space-y-5">
-        <h2 className="text-sm font-semibold text-muted">Terms</h2>
-        <div className="grid gap-5 sm:grid-cols-2">
+      <Card
+        title="Terms"
+        description="How this rental is charged."
+        icon={<ReceiptText className="size-[18px]" strokeWidth={1.75} />}
+      >
+        <div className="grid gap-5 px-5 py-5 sm:grid-cols-2">
           <div>
-            <label htmlFor="field-rateType" className="mb-1.5 block text-sm font-medium text-ink">
+            <label htmlFor="field-rateType" className="field-label">
               Charged
             </label>
             <select
@@ -146,7 +161,7 @@ export function BookingForm({
               name="rateType"
               value={rateType}
               onChange={(e) => setRateType(e.target.value as RateTypeKey)}
-              className="w-full rounded-md border border-line bg-paper px-3 py-2 text-[15px]"
+              className="field-control"
             >
               {RATE_TYPES.map((t) => (
                 <option key={t} value={t}>
@@ -165,10 +180,10 @@ export function BookingForm({
             error={state.fieldErrors?.notes}
           />
         </div>
-      </section>
+      </Card>
 
       {estimate && chosen ? (
-        <dl className="rounded-lg border border-line bg-paper p-4 text-[15px]">
+        <dl className="rounded-xl border border-plate-dark/40 bg-plate/10 p-5 text-[15px]">
           <div className="flex justify-between">
             <dt className="text-muted">
               {estimate.units} × {RATE_LABELS[rateType].toLowerCase()} at {formatMoney(rate!)}
