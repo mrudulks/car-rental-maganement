@@ -50,6 +50,7 @@ const audit = async (page, path, label) => {
     // Every control a person can type into needs an accessible name.
     for (const el of document.querySelectorAll('input, select, textarea')) {
       if (el.type === 'hidden') continue
+      if (typeof el.checkVisibility === 'function' && !el.checkVisibility()) continue
       const byLabel = el.id && document.querySelector(`label[for="${CSS.escape(el.id)}"]`)
       const named = byLabel || el.getAttribute('aria-label') || el.closest('label')
       if (!named) out.unlabelled.push(`${el.tagName.toLowerCase()}[name=${el.name || '?'}]`)
@@ -65,7 +66,10 @@ const audit = async (page, path, label) => {
     }
 
     for (const a of document.querySelectorAll('a,button')) {
-      const name = (a.innerText || a.getAttribute('aria-label') || '').trim()
+      // Skip anything not currently rendered -- a closed mobile drawer is hidden on
+      // purpose, and its contents are not on screen to be named.
+      if (typeof a.checkVisibility === 'function' && !a.checkVisibility()) continue
+      const name = (a.innerText || a.textContent || a.getAttribute('aria-label') || '').trim()
       if (!name) out.emptyLinks.push(a.outerHTML.slice(0, 60))
     }
     return out
@@ -101,6 +105,29 @@ for (const [w, h, size] of [[390, 844, 'phone'], [1440, 950, 'desktop']]) {
   }
   await page.close()
 }
+
+// The phone menu must be operable, not just present.
+const drawer = await signIn(390, 844)
+await drawer.goto(`${BASE}/fleet`, { waitUntil: 'networkidle' })
+const menuBtn = drawer.locator('button:has-text("Open menu")')
+if (!(await menuBtn.isVisible())) {
+  note('phone drawer', 'no menu button at 390px, so the navigation is unreachable')
+} else {
+  if (await drawer.locator('nav[aria-label=Main] a:has-text("Fleet")').isVisible()) {
+    note('phone drawer', 'the nav is on screen before the menu is opened')
+  }
+  await menuBtn.click()
+  await drawer.locator('nav[aria-label=Main] a:has-text("Fleet")').waitFor({ state: 'visible', timeout: 5000 })
+  if ((await menuBtn.getAttribute('aria-expanded')) !== 'true') {
+    note('phone drawer', 'the menu button does not report aria-expanded=true when open')
+  }
+  await drawer.keyboard.press('Escape')
+  await drawer.waitForTimeout(400)
+  if (await drawer.locator('nav[aria-label=Main] a:has-text("Fleet")').isVisible()) {
+    note('phone drawer', 'Escape does not close the menu')
+  }
+}
+await drawer.close()
 
 // The skip link must be reachable and actually work.
 const kb = await signIn(1440, 950)
