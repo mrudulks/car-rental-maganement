@@ -9,12 +9,12 @@ import { PrismaPg } from '@prisma/adapter-pg'
  * for code that genuinely has no organization yet -- signup and login. Feature code
  * takes a scoped client from `forOrganization()` in ./tenant instead.
  */
-const createClient = () => {
+function createClient() {
   const connectionString = process.env.DATABASE_URL
 
-  // Without this, an unset DATABASE_URL is not an error: node-postgres quietly falls
-  // back to localhost:5432 and every query dies with ECONNREFUSED, which reads like a
-  // network fault rather than missing configuration.
+  // node-postgres treats an absent connection string as "use the defaults", so it
+  // quietly tries localhost:5432 and every query dies with ECONNREFUSED. On a host that
+  // reads as a network fault when it is really missing configuration.
   if (!connectionString) {
     throw new Error(
       'DATABASE_URL is not set. Locally, copy .env.example to .env. On a host, set it ' +
@@ -26,12 +26,32 @@ const createClient = () => {
   return new PrismaClient({ adapter: new PrismaPg({ connectionString }) })
 }
 
+type Client = ReturnType<typeof createClient>
+
 // Next's dev server reloads modules on every edit; without this we would leak a new
 // connection pool per reload until Postgres refuses connections.
-const globalForPrisma = globalThis as unknown as {
-  prisma?: ReturnType<typeof createClient>
+const globalForPrisma = globalThis as unknown as { prisma?: Client }
+
+let client: Client | undefined
+
+function getClient(): Client {
+  if (client) return client
+  client = globalForPrisma.prisma ?? createClient()
+  if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = client
+  return client
 }
 
-export const prisma = globalForPrisma.prisma ?? createClient()
-
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+/**
+ * Connected lazily, on first use rather than on import.
+ *
+ * `next build` imports this module while collecting page data, in a build environment
+ * that has no database and does not need one. Constructing eagerly would make a missing
+ * DATABASE_URL fail the build instead of the request that actually needs it.
+ */
+export const prisma = new Proxy({} as Client, {
+  get(_target, property) {
+    const instance = getClient() as unknown as Record<string | symbol, unknown>
+    const value = instance[property]
+    return typeof value === 'function' ? value.bind(instance) : value
+  },
+})
