@@ -61,8 +61,15 @@ await shot(owner, '51-customer-detail')
 // Editing, and the phone-number clash.
 const customerUrl = owner.url()
 await owner.fill('#field-licenceNumber', 'MH14 20180009999')
-await owner.click('button:has-text("Save changes")')
-await owner.waitForLoadState('networkidle')
+// Wait for the server action's round-trip, not for the page to look idle: the click
+// returns before the action has run, and networkidle can resolve in that gap.
+await Promise.all([
+  owner.waitForResponse(
+    (r) => r.request().method() === 'POST' && r.url().includes('/customers/'),
+    { timeout: 30000 },
+  ),
+  owner.click('button:has-text("Save changes")'),
+])
 await owner.goto(customerUrl, { waitUntil: 'networkidle' })
 check('the edit saved', await owner.inputValue('#field-licenceNumber'), 'MH14 20180009999')
 

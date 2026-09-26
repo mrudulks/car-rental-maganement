@@ -1,0 +1,21 @@
+# Railway deployment.
+#
+# The app is a long-lived Node server (`next start`) holding a Postgres connection
+# pool, which is why it is here rather than on a serverless host.
+
+[build]
+builder = "NIXPACKS"
+buildCommand = "npm run build"
+
+[deploy]
+# Runs once against the new version before it takes traffic, so the schema is in place
+# before the first request. `migrate deploy` only applies committed migrations and never
+# generates or resets anything.
+preDeployCommand = "npx prisma migrate deploy"
+startCommand = "npm run start"
+
+# /login is the one page that answers without a session.
+healthcheckPath = "/login"
+healthcheckTimeout = 120
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3

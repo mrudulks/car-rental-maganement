@@ -25,6 +25,11 @@ Demo sign-ins (both `password123`):
 
 Signing in as each shows only that organization's fleet — the point of the tenant layer.
 
+## Deploying
+
+See [DEPLOY.md](DEPLOY.md). It targets Railway, because the app is a long-lived Node
+server holding a Postgres pool rather than a set of serverless functions.
+
 ## Checks
 
 ```bash

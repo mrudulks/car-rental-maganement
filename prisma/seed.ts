@@ -161,7 +161,40 @@ async function seedOrg(opts: {
   console.log(`  ${opts.name}: ${opts.ownerEmail} / ${PASSWORD}`)
 }
 
+/**
+ * This script deletes everything before seeding. That is fine locally and unrecoverable
+ * anywhere else, so it refuses to run against a deployed database unless someone says
+ * so out loud with SEED_CONFIRM=wipe.
+ */
+function guardAgainstAccidents() {
+  const url = process.env.DATABASE_URL ?? ''
+  const isLocal = /@(localhost|127\.0\.0\.1|host\.docker\.internal|db)[:/]/.test(url)
+  const confirmed = process.env.SEED_CONFIRM === 'wipe'
+
+  if (!url) {
+    throw new Error('DATABASE_URL is not set.')
+  }
+
+  if (!isLocal && !confirmed) {
+    throw new Error(
+      [
+        'Refusing to seed: DATABASE_URL does not look local, and seeding DELETES every',
+        'organization, vehicle, booking and customer in the database.',
+        '',
+        `  target: ${url.replace(/:[^:@/]*@/, ':****@')}`,
+        '',
+        'If you really mean to wipe it, run again with SEED_CONFIRM=wipe.',
+      ].join('\n'),
+    )
+  }
+
+  if (!isLocal) {
+    console.log('⚠️  Wiping a non-local database because SEED_CONFIRM=wipe was set.')
+  }
+}
+
 async function main() {
+  guardAgainstAccidents()
   console.log('Clearing existing data...')
   await prisma.$executeRawUnsafe(
     'TRUNCATE TABLE "Booking", "Vehicle", "Customer", "User", "Branch", "Organization" RESTART IDENTITY CASCADE',
