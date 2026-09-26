@@ -39,3 +39,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Keep the template committed, ignore real secrets
+!.env.example
+
+/src/generated/prisma
+
+# Prisma Client is generated from the schema; run `npm run db:generate`
+/src/generated

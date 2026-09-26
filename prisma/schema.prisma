@@ -1,0 +1,222 @@
+// Multi-tenant vehicle rental management.
+//
+// Tenancy rule: every tenant-owned model carries `organizationId`. No feature code
+// writes that filter by hand -- src/server/db/tenant.ts injects it for every query.
+// See tests/isolation for the suite that holds this honest.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Plan {
+  FREE
+}
+
+enum OrgStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum Role {
+  OWNER
+  MANAGER
+  STAFF
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum VehicleCategory {
+  CAR
+  BIKE
+  SCOOTER
+  VAN
+  TRUCK
+  OTHER
+}
+
+enum VehicleStatus {
+  AVAILABLE
+  RENTED
+  MAINTENANCE
+  RETIRED
+}
+
+enum BookingStatus {
+  RESERVED
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum RateType {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+model Organization {
+  id        String    @id @default(cuid())
+  name      String
+  slug      String    @unique
+  plan      Plan      @default(FREE)
+  status    OrgStatus @default(ACTIVE)
+  // Hands out human-readable booking numbers (BK-0001) per tenant. Incremented inside
+  // the booking transaction so two counter staff cannot be given the same number.
+  bookingSeq Int      @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  branches  Branch[]
+  users     User[]
+  vehicles  Vehicle[]
+  customers Customer[]
+  bookings  Booking[]
+}
+
+model Branch {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  address        String?
+  phone          String?
+  isDefault      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  users        User[]
+  vehicles     Vehicle[]
+  bookings     Booking[]
+
+  @@index([organizationId])
+}
+
+model User {
+  id             String     @id @default(cuid())
+  organizationId String
+  // Login is global, so email is unique across the whole platform rather than per org.
+  email          String     @unique
+  passwordHash   String
+  name           String
+  role           Role       @default(STAFF)
+  // Owners span every branch, so their branchId is null.
+  branchId       String?
+  status         UserStatus @default(ACTIVE)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch          Branch?      @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  createdBookings Booking[]    @relation("BookingCreatedBy")
+
+  @@index([organizationId])
+  @@index([branchId])
+}
+
+model Vehicle {
+  id                 String          @id @default(cuid())
+  organizationId     String
+  branchId           String
+  category           VehicleCategory
+  registrationNumber String
+  make               String
+  model              String
+  year               Int?
+  color              String?
+  status             VehicleStatus   @default(AVAILABLE)
+  odometer           Int             @default(0)
+  dailyRate          Decimal         @db.Decimal(12, 2)
+  weeklyRate         Decimal?        @db.Decimal(12, 2)
+  monthlyRate        Decimal?        @db.Decimal(12, 2)
+  depositAmount      Decimal         @default(0) @db.Decimal(12, 2)
+  // Category-specific fields: seats, transmission, fuelType, engineCc, loadCapacity...
+  attributes         Json            @default("{}")
+  notes              String?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch       Branch       @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  bookings     Booking[]
+
+  @@unique([organizationId, registrationNumber])
+  @@index([organizationId])
+  @@index([branchId])
+  @@index([organizationId, status])
+}
+
+model Customer {
+  id             String   @id @default(cuid())
+  organizationId String
+  fullName       String
+  phone          String
+  email          String?
+  licenceNumber  String?
+  address        String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  bookings     Booking[]
+
+  @@index([organizationId])
+  @@index([organizationId, phone])
+}
+
+model Booking {
+  id             String        @id @default(cuid())
+  organizationId String
+  branchId       String
+  vehicleId      String
+  customerId     String
+  bookingNumber  String
+  status         BookingStatus @default(RESERVED)
+
+  // Planned window. The no-overlap exclusion constraint is defined on these
+  // in a raw migration -- Prisma cannot express EXCLUDE USING gist.
+  startAt DateTime @db.Timestamptz(3)
+  endAt   DateTime @db.Timestamptz(3)
+
+  // What actually happened.
+  actualStartAt DateTime? @db.Timestamptz(3)
+  actualEndAt   DateTime? @db.Timestamptz(3)
+
+  rateType       RateType @default(DAILY)
+  ratePerUnit    Decimal  @db.Decimal(12, 2)
+  estimatedTotal Decimal  @db.Decimal(12, 2)
+  depositAmount  Decimal  @default(0) @db.Decimal(12, 2)
+  notes          String?
+
+  // Check-out / check-in live on the booking: one lifecycle, one row.
+  checkoutOdometer  Int?
+  checkoutFuelLevel Int?
+  checkoutNotes     String?
+  checkinOdometer   Int?
+  checkinFuelLevel  Int?
+  checkinNotes      String?
+  damageNotes       String?
+
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  organization  Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch        Branch       @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  vehicle       Vehicle      @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  customer      Customer     @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  createdByUser User?        @relation("BookingCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, bookingNumber])
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([vehicleId, startAt, endAt])
+  @@index([branchId])
+}

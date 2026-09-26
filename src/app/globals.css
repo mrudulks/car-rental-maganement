@@ -1,26 +1,60 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/*
+  Palette anchored on the Indian commercial-vehicle number plate: black type on
+  signal yellow. Yellow is the one loud element and is reserved for the primary
+  action and the plate itself; everything else stays quiet so a counter screen
+  full of rows remains readable.
+*/
+@theme {
+  --color-ink: #16212b;
+  --color-ink-700: #22323f;
+  --color-ink-500: #3d5263;
+  --color-muted: #5e6c75;
+  --color-paper: #ffffff;
+  --color-wash: #eff1f0;
+  --color-line: #d3d9d8;
+  --color-plate: #f2c230;
+  --color-plate-dark: #d9a715;
+  --color-available: #1f7a5a;
+  --color-rented: #b4541a;
+  --color-maintenance: #8a6d1f;
+  --color-danger: #a32a2a;
+
+  --font-sans: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
+  --font-plate: var(--font-plex-mono), ui-monospace, monospace;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+* {
+  min-width: 0;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-wash);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  /* Rows of vehicle data line up only if the digits do. */
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* A visible, high-contrast focus ring everywhere, including on the dark panel. */
+:focus-visible {
+  outline: 2px solid var(--color-plate);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
