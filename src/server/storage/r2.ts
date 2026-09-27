@@ -35,6 +35,12 @@ function s3(): S3Client {
     region: 'auto',
     endpoint: `https://${ACCOUNT_ID}.r2.cloudflarestorage.com`,
     credentials: { accessKeyId: ACCESS_KEY_ID!, secretAccessKey: SECRET_ACCESS_KEY! },
+    // The SDK otherwise adds a CRC32 checksum to PutObject. When the request is
+    // presigned rather than sent, it bakes in the checksum of an empty body, and the
+    // browser then uploads the real file -- so the checksum never matches and the
+    // upload is rejected. Only compute checksums where the protocol demands them.
+    requestChecksumCalculation: 'WHEN_REQUIRED',
+    responseChecksumValidation: 'WHEN_REQUIRED',
   })
   return client
 }

@@ -75,6 +75,28 @@ await rival.goto(`${BASE}${bookingPath}/check-out`, { waitUntil: 'networkidle' }
 check('another tenant cannot reach the capture page',
   /not found/i.test(await text(rival)), true)
 
+// --- A real upload, when storage is configured ---------------------------
+// Only meaningful with real credentials; skipped otherwise so the suite still runs.
+if (configured && process.env.MEDIA_UPLOAD_FILE) {
+  await owner.goto(`${BASE}${bookingPath}/check-out`, { waitUntil: 'networkidle' })
+  await owner.setInputFiles('input[type=file]', process.env.MEDIA_UPLOAD_FILE)
+
+  // Wait for the gallery specifically. The progress panel shows the same file name
+  // while the upload is in flight, so "the name is on the page" stays true even when
+  // the upload then fails -- which is how a broken upload once looked like a pass.
+  const gallery = owner.locator('[data-testid=media-gallery]')
+  let landed = true
+  try {
+    await gallery.waitFor({ state: 'visible', timeout: 60000 })
+  } catch {
+    landed = false
+  }
+  check('a real file reaches the gallery', landed, true)
+  if (!landed) {
+    console.log('      alerts:', JSON.stringify(await owner.locator('[role=alert]').allTextContents()))
+  }
+}
+
 const BENIGN = [
   /Failed to load resource: the server responded with a status of 404/,
   /Failed to execute 'measure' on 'Performance'/,

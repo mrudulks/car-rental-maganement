@@ -37,6 +37,7 @@ export function MediaGallery({ media }: { media: MediaDTO[] }) {
       description="Locked when it was taken and kept as it was."
       icon={<Lock className="size-[18px]" strokeWidth={1.75} />}
       className="mt-6"
+      data-testid="media-gallery"
     >
       {error ? (
         <p role="alert" className="border-b border-line px-5 py-2.5 text-sm text-danger">

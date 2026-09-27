@@ -32,6 +32,7 @@ export function Card({
   aside,
   children,
   className = '',
+  ...rest
 }: {
   title?: string
   description?: string
@@ -39,9 +40,9 @@ export function Card({
   aside?: ReactNode
   children: ReactNode
   className?: string
-}) {
+} & Record<`data-${string}`, string | undefined>) {
   return (
-    <section className={`rounded-xl border border-line bg-paper ${className}`}>
+    <section {...rest} className={`rounded-xl border border-line bg-paper ${className}`}>
       {title ? (
         <header className="flex items-start justify-between gap-4 border-b border-line px-5 py-4">
           <div className="flex items-start gap-2.5">
