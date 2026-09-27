@@ -32,7 +32,7 @@ async function routes(page) {
   return [
     '/dashboard', '/fleet', '/fleet/new', vehicleHref,
     '/bookings', '/bookings/new', bookingHref,
-    '/customers', customerHref, '/nope-does-not-exist',
+    '/customers', customerHref, '/calendar', '/settings', '/nope-does-not-exist',
   ]
 }
 

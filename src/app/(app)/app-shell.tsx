@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   CalendarClock,
+  CalendarRange,
   CarFront,
   LayoutDashboard,
   LogOut,
@@ -20,6 +21,7 @@ const NAV = [
   { href: '/dashboard', label: 'Today', Icon: LayoutDashboard },
   { href: '/fleet', label: 'Fleet', Icon: CarFront },
   { href: '/bookings', label: 'Bookings', Icon: CalendarClock },
+  { href: '/calendar', label: 'Calendar', Icon: CalendarRange },
   { href: '/customers', label: 'Customers', Icon: Users },
 ] as const
 

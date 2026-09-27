@@ -62,6 +62,12 @@ enum RateType {
   MONTHLY
 }
 
+enum ServiceStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
 enum ChargeKind {
   RENTAL
   EXTRA
@@ -125,6 +131,7 @@ model Organization {
   payments     Payment[]
   invoices     Invoice[]
   invoiceLines InvoiceLine[]
+  services     ServiceSchedule[]
 }
 
 model Branch {
@@ -164,7 +171,8 @@ model User {
   createdBookings Booking[]       @relation("BookingCreatedBy")
   createdCharges  BookingCharge[] @relation("ChargeCreatedBy")
   takenPayments   Payment[]       @relation("PaymentReceivedBy")
-  issuedInvoices  Invoice[]       @relation("InvoiceIssuedBy")
+  issuedInvoices  Invoice[]         @relation("InvoiceIssuedBy")
+  createdServices ServiceSchedule[] @relation("ServiceCreatedBy")
 
   @@index([organizationId])
   @@index([branchId])
@@ -192,9 +200,10 @@ model Vehicle {
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  branch       Branch       @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch       Branch            @relation(fields: [branchId], references: [id], onDelete: Restrict)
   bookings     Booking[]
+  services     ServiceSchedule[]
 
   @@unique([organizationId, registrationNumber])
   @@index([organizationId])
@@ -325,6 +334,32 @@ model InvoiceLine {
 
   @@index([invoiceId])
   @@index([organizationId])
+}
+
+/// A booked workshop slot. Without dates, "in service" is only ever a state now; with
+/// them a vehicle can be taken off the road for a window, and that window blocks
+/// bookings the same way another rental does.
+model ServiceSchedule {
+  id             String        @id @default(cuid())
+  organizationId String
+  vehicleId      String
+  status         ServiceStatus @default(SCHEDULED)
+  reason         String
+  notes          String?
+  startAt        DateTime      @db.Timestamptz(3)
+  endAt          DateTime      @db.Timestamptz(3)
+
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  organization  Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  vehicle       Vehicle      @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  createdByUser User?        @relation("ServiceCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([vehicleId, startAt, endAt])
+  @@index([organizationId, status])
 }
 
 model Customer {

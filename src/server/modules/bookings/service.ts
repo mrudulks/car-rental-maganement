@@ -113,6 +113,14 @@ export async function findAvailableVehicles(
           endAt: { gt: window.startAt },
         },
       },
+      // A workshop slot takes the vehicle off the road just as a rental does.
+      services: {
+        none: {
+          status: 'SCHEDULED',
+          startAt: { lt: window.endAt },
+          endAt: { gt: window.startAt },
+        },
+      },
     },
     select: {
       id: true,
@@ -202,6 +210,26 @@ export async function createBooking(
 
   try {
     const created = await prisma.$transaction(async (tx) => {
+      // Rentals and workshop slots live in different tables, so no single constraint
+      // can hold them apart. Locking the vehicle row makes the two paths take turns.
+      await tx.$queryRaw`SELECT id FROM "Vehicle" WHERE id = ${vehicle.id} FOR UPDATE`
+
+      const inService = await tx.serviceSchedule.findFirst({
+        where: {
+          vehicleId: vehicle.id,
+          status: 'SCHEDULED',
+          startAt: { lt: input.endAt },
+          endAt: { gt: input.startAt },
+        },
+        select: { reason: true },
+      })
+      if (inService) {
+        throw new BookingError(
+          `This vehicle is booked into the workshop for part of those dates (${inService.reason}).`,
+          'vehicleId',
+        )
+      }
+
       // Atomic per-tenant counter: two people booking at once get different numbers.
       const org = await tx.organization.update({
         where: { id: auth.organization.id },
@@ -232,6 +260,7 @@ export async function createBooking(
 
     return toDTO(created)
   } catch (error) {
+    if (error instanceof BookingError) throw error
     throw asFriendlyError(error)
   }
 }
