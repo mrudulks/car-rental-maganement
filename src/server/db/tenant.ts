@@ -20,6 +20,8 @@ const SCOPE_FIELD: Record<string, string> = {
   Vehicle: 'organizationId',
   Customer: 'organizationId',
   Booking: 'organizationId',
+  BookingCharge: 'organizationId',
+  Payment: 'organizationId',
 }
 
 const WHERE_OPS = new Set([

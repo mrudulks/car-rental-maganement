@@ -3,10 +3,12 @@ import { notFound } from 'next/navigation'
 import { requireAuth } from '@/server/auth/dal'
 import { can } from '@/server/auth/permissions'
 import { getBooking, distanceCovered } from '@/server/modules/bookings/service'
+import { getBill } from '@/server/modules/billing/service'
 import { RATE_LABELS } from '@/server/modules/bookings/schema'
 import { Plate, formatMoney } from '@/components/ui'
 import { BookingStatusPill, formatWhen } from '@/components/booking-ui'
 import { CancelBooking } from './cancel-booking'
+import { Bill } from './bill'
 
 export const metadata = { title: 'Booking — Fleetdesk' }
 
@@ -15,6 +17,8 @@ export default async function BookingPage(props: PageProps<'/bookings/[id]'>) {
   const auth = await requireAuth()
   const booking = await getBooking(auth, id)
   if (!booking) notFound()
+
+  const bill = can(auth.user.role, 'payment:read') ? await getBill(auth, booking.id) : null
 
   return (
     <div className="max-w-2xl">
@@ -107,6 +111,16 @@ export default async function BookingPage(props: PageProps<'/bookings/[id]'>) {
             ) : null}
           </dl>
         </section>
+      ) : null}
+
+      {bill ? (
+        <Bill
+          bookingId={booking.id}
+          bill={bill}
+          canRecord={can(auth.user.role, 'payment:record')}
+          canRefund={can(auth.user.role, 'payment:refund')}
+          cancelled={booking.status === 'CANCELLED'}
+        />
       ) : null}
 
       {booking.status === 'RESERVED' ? (

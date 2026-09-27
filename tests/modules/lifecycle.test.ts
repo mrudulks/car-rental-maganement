@@ -8,6 +8,7 @@ import {
   findAvailableVehicles,
   distanceCovered,
 } from '@/server/modules/bookings/service'
+import { getBill } from '@/server/modules/billing/service'
 import { resetDatabase, seedOrg, type SeededOrg } from '../helpers/db'
 import { authFor } from '../helpers/auth'
 
@@ -206,5 +207,37 @@ describe('rental lifecycle', () => {
         checkIn(staff, booking.id, { odometer: 12980, fuelLevel: 45, notes: null, damageNotes: null }),
       ).resolves.toMatchObject({ status: 'COMPLETED' })
     })
+  })
+})
+
+describe('the bill starts at hand-over', () => {
+  let alpha: SeededOrg
+
+  beforeEach(async () => {
+    await resetDatabase()
+    alpha = await seedOrg('alpha')
+  })
+
+  it('writes the rental line when the keys go out, and only then', async () => {
+    const auth = await authFor(alpha.org.id)
+    const booking = await createBooking(auth, {
+      vehicleId: alpha.vehicle.id,
+      customerId: alpha.customer.id,
+      startAt: day(1),
+      endAt: day(4),
+      rateType: 'DAILY',
+      notes: null,
+    })
+
+    // Reserved but not collected: nothing owed yet.
+    expect((await getBill(auth, booking.id)).charges).toHaveLength(0)
+
+    await checkOut(auth, booking.id, { odometer: 12500, fuelLevel: 80, notes: null })
+
+    const bill = await getBill(auth, booking.id)
+    expect(bill.charges).toHaveLength(1)
+    expect(bill.charges[0]!.kind).toBe('RENTAL')
+    expect(bill.taxable).toBe('4500.00')
+    expect(bill.total).toBe('5310.00')
   })
 })

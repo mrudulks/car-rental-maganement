@@ -136,3 +136,20 @@ describe('permissions', () => {
     expect(() => assertCan('OWNER', 'vehicle:delete')).not.toThrow()
   })
 })
+
+describe('money permissions', () => {
+  it('lets staff take payments but not give them back', () => {
+    expect(can('STAFF', 'payment:read')).toBe(true)
+    expect(can('STAFF', 'payment:record')).toBe(true)
+    expect(can('STAFF', 'payment:refund')).toBe(false)
+  })
+
+  it('lets managers refund', () => {
+    expect(can('MANAGER', 'payment:refund')).toBe(true)
+  })
+
+  it('keeps GST settings to owners', () => {
+    expect(can('MANAGER', 'org:manage')).toBe(false)
+    expect(can('OWNER', 'org:manage')).toBe(true)
+  })
+})

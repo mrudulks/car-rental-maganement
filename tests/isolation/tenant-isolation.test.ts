@@ -122,6 +122,88 @@ describe('tenant isolation', () => {
     })
   })
 
+  describe('money', () => {
+    it('never shows another organization charges or payments', async () => {
+      // Seed a bill on beta directly, then try to reach it as alpha.
+      const booking = await prisma.booking.create({
+        data: {
+          organizationId: beta.org.id,
+          branchId: beta.branch.id,
+          vehicleId: beta.vehicle.id,
+          customerId: beta.customer.id,
+          bookingNumber: 'BK-ISO-1',
+          status: 'RESERVED',
+          startAt: new Date('2026-08-01T10:00:00Z'),
+          endAt: new Date('2026-08-03T10:00:00Z'),
+          ratePerUnit: '1500',
+          estimatedTotal: '3000',
+        },
+      })
+      await prisma.bookingCharge.create({
+        data: {
+          organizationId: beta.org.id,
+          bookingId: booking.id,
+          kind: 'EXTRA',
+          description: 'Secret extra',
+          quantity: '1',
+          unitAmount: '100',
+          amount: '100',
+        },
+      })
+      await prisma.payment.create({
+        data: {
+          organizationId: beta.org.id,
+          bookingId: booking.id,
+          amount: '100',
+          method: 'CASH',
+        },
+      })
+
+      const db = forOrganization(alpha.org.id)
+      expect(await db.bookingCharge.findMany()).toHaveLength(0)
+      expect(await db.payment.findMany()).toHaveLength(0)
+      expect(await db.bookingCharge.count()).toBe(0)
+      expect(await db.payment.count()).toBe(0)
+    })
+
+    it('forces the caller organization onto a charge and a payment', async () => {
+      const db = forOrganization(alpha.org.id)
+      const booking = await prisma.booking.create({
+        data: {
+          organizationId: alpha.org.id,
+          branchId: alpha.branch.id,
+          vehicleId: alpha.vehicle.id,
+          customerId: alpha.customer.id,
+          bookingNumber: 'BK-ISO-2',
+          status: 'RESERVED',
+          startAt: new Date('2026-09-01T10:00:00Z'),
+          endAt: new Date('2026-09-03T10:00:00Z'),
+          ratePerUnit: '1500',
+          estimatedTotal: '3000',
+        },
+      })
+
+      const charge = await db.bookingCharge.create({
+        // Lying about the organization again: the extension must overrule it.
+        data: {
+          organizationId: beta.org.id,
+          bookingId: booking.id,
+          kind: 'EXTRA',
+          description: 'Smuggled',
+          quantity: '1',
+          unitAmount: '1',
+          amount: '1',
+        },
+      })
+      expect(charge.organizationId).toBe(alpha.org.id)
+
+      const payment = await db.payment.create({
+        data: { organizationId: beta.org.id, bookingId: booking.id, amount: '1', method: 'CASH' },
+      })
+      expect(payment.organizationId).toBe(alpha.org.id)
+    })
+  })
+
   it('refuses to build a client without an organization id', () => {
     expect(() => forOrganization('')).toThrow(/requires an organizationId/)
   })

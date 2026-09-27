@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  Settings,
   Users,
   X,
 } from 'lucide-react'
@@ -21,6 +22,9 @@ const NAV = [
   { href: '/bookings', label: 'Bookings', Icon: CalendarClock },
   { href: '/customers', label: 'Customers', Icon: Users },
 ] as const
+
+// Only an owner can change the invoice details, so only an owner sees the way in.
+const OWNER_NAV = [{ href: '/settings', label: 'Settings', Icon: Settings }] as const
 
 const ROLE_LABELS: Record<Role, string> = {
   OWNER: 'Owner',
@@ -109,7 +113,7 @@ export function AppShell({ user, organization, children }: Props) {
         </div>
 
         <nav aria-label="Main" className="flex-1 space-y-1 px-3 py-2">
-          {NAV.map(({ Icon, ...item }) => {
+          {[...NAV, ...(user.role === 'OWNER' ? OWNER_NAV : [])].map(({ Icon, ...item }) => {
             const current = pathname === item.href || pathname.startsWith(`${item.href}/`)
             return (
               <Link

@@ -14,6 +14,9 @@ export const ACTIONS = [
   'booking:cancel',
   'customer:read',
   'customer:write',
+  'payment:read',
+  'payment:record',
+  'payment:refund',
   'branch:manage',
   'user:manage',
   'org:manage',
@@ -31,9 +34,18 @@ const STAFF: Action[] = [
   'booking:write',
   'customer:read',
   'customer:write',
+  // Taking money at the counter is the job; handing it back is a decision.
+  'payment:read',
+  'payment:record',
 ]
 
-const MANAGER: Action[] = [...STAFF, 'vehicle:delete', 'vehicle:setRates', 'booking:cancel']
+const MANAGER: Action[] = [
+  ...STAFF,
+  'vehicle:delete',
+  'vehicle:setRates',
+  'booking:cancel',
+  'payment:refund',
+]
 
 const PERMISSIONS: Record<Role, readonly Action[]> = {
   STAFF,

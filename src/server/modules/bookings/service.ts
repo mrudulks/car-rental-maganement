@@ -3,6 +3,7 @@ import type { BookingStatus } from '@/generated/prisma/enums'
 import type { AuthContext } from '@/server/auth/dal'
 import { assertCan } from '@/server/auth/permissions'
 import { prisma } from '@/server/db/client'
+import { ensureRentalCharge } from '@/server/modules/billing/service'
 import {
   quote,
   RATE_DAYS,
@@ -376,6 +377,10 @@ export async function checkOut(
 
     return b
   })
+
+  // The bill starts when the customer has the keys. Idempotent, so a retry cannot
+  // charge the rental twice, and a failure here does not undo the hand-over.
+  await ensureRentalCharge(auth, booking.id)
 
   return toDTO(updated)
 }
