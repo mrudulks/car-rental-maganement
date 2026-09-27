@@ -17,6 +17,7 @@ export const ACTIONS = [
   'payment:read',
   'payment:record',
   'payment:refund',
+  'invoice:issue',
   'branch:manage',
   'user:manage',
   'org:manage',
@@ -37,6 +38,8 @@ const STAFF: Action[] = [
   // Taking money at the counter is the job; handing it back is a decision.
   'payment:read',
   'payment:record',
+  // Handing the customer their bill is part of closing a rental.
+  'invoice:issue',
 ]
 
 const MANAGER: Action[] = [

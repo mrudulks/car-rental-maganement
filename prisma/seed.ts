@@ -102,7 +102,7 @@ async function seedOrg(opts: {
 
   for (const [vi, ci, from, to] of live) {
     const vehicle = vehicles[vi]!
-    await prisma.booking.create({
+    const booking = await prisma.booking.create({
       data: {
         organizationId: org.id,
         branchId: branch.id,
@@ -123,6 +123,21 @@ async function seedOrg(opts: {
       },
     })
     await prisma.vehicle.update({ where: { id: vehicle.id }, data: { status: 'RENTED' } })
+
+    // A vehicle that is out has already been billed for the rental -- seeding it any
+    // other way produces a state that checking out could never create.
+    await prisma.bookingCharge.create({
+      data: {
+        organizationId: org.id,
+        bookingId: booking.id,
+        kind: 'RENTAL',
+        description: 'Vehicle rental (daily)',
+        quantity: String(to - from),
+        unitAmount: vehicle.dailyRate,
+        amount: String(Number(vehicle.dailyRate) * (to - from)),
+        taxable: true,
+      },
+    })
   }
 
   // One vehicle is off the road.

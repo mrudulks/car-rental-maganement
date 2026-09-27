@@ -219,6 +219,7 @@ export async function addCharge(
   if (booking.status === 'CANCELLED') {
     throw new BillingError('A cancelled booking cannot be charged.')
   }
+  await assertNotInvoiced(auth, bookingId)
 
   const amount = lineAmount(input.quantity, input.unitAmount)
 
@@ -250,14 +251,28 @@ export async function removeCharge(auth: AuthContext, chargeId: string): Promise
 
   const charge = await auth.db.bookingCharge.findUnique({
     where: { id: chargeId },
-    select: { kind: true },
+    select: { kind: true, bookingId: true },
   })
   if (!charge) throw new BillingError('That charge is no longer on the bill')
   if (charge.kind === 'RENTAL') {
     throw new BillingError('The rental line comes from the booking and cannot be removed.')
   }
+  await assertNotInvoiced(auth, charge.bookingId)
 
   await auth.db.bookingCharge.deleteMany({ where: { id: chargeId } })
+}
+
+/**
+ * An issued invoice is a snapshot the customer already holds, so the bill behind it
+ * has to stop moving. Anything further belongs on a credit note, not a silent edit.
+ */
+async function assertNotInvoiced(auth: AuthContext, bookingId: string) {
+  const invoiced = await auth.db.invoice.count({ where: { bookingId } })
+  if (invoiced > 0) {
+    throw new BillingError(
+      'This booking has already been invoiced, so the bill cannot be changed.',
+    )
+  }
 }
 
 export async function recordPayment(

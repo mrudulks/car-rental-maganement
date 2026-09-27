@@ -108,6 +108,10 @@ model Organization {
   // Renting a motor vehicle attracts different rates depending on how the business is
   // registered, so the rate is the organization's to set.
   gstRate     Decimal @default(18) @db.Decimal(5, 2)
+  /// GST invoice numbers must be consecutive and unique within a financial year, so the
+  /// counter records which year it belongs to and restarts each April.
+  invoiceSeq  Int     @default(0)
+  invoiceFy   String?
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -118,7 +122,9 @@ model Organization {
   customers Customer[]
   bookings  Booking[]
   charges   BookingCharge[]
-  payments  Payment[]
+  payments     Payment[]
+  invoices     Invoice[]
+  invoiceLines InvoiceLine[]
 }
 
 model Branch {
@@ -158,6 +164,7 @@ model User {
   createdBookings Booking[]       @relation("BookingCreatedBy")
   createdCharges  BookingCharge[] @relation("ChargeCreatedBy")
   takenPayments   Payment[]       @relation("PaymentReceivedBy")
+  issuedInvoices  Invoice[]       @relation("InvoiceIssuedBy")
 
   @@index([organizationId])
   @@index([branchId])
@@ -248,6 +255,78 @@ model Payment {
   @@index([bookingId])
 }
 
+/// A GST invoice, snapshotted in full.
+///
+/// Everything the document shows is copied in at the moment it is issued -- the
+/// supplier's registered details, the customer, the rate, every line. Raising a
+/// vehicle's daily rate in July must not alter an invoice issued in June.
+model Invoice {
+  id             String   @id @default(cuid())
+  organizationId String
+  bookingId      String   @unique
+  invoiceNumber  String
+  financialYear  String
+  issuedAt       DateTime @default(now()) @db.Timestamptz(3)
+
+  supplierName      String
+  supplierGstin     String?
+  supplierAddress   String?
+  supplierState     String?
+  supplierStateCode String?
+
+  customerName    String
+  customerPhone   String
+  customerAddress String?
+
+  /// For renting a motor vehicle handed over at the branch, this is the branch's state.
+  placeOfSupply String?
+
+  gstRate         Decimal @db.Decimal(5, 2)
+  taxableTotal    Decimal @db.Decimal(12, 2)
+  nonTaxableTotal Decimal @default(0) @db.Decimal(12, 2)
+  cgstTotal       Decimal @db.Decimal(12, 2)
+  sgstTotal       Decimal @db.Decimal(12, 2)
+  grandTotal      Decimal @db.Decimal(12, 2)
+
+  issuedByUserId String?
+  createdAt      DateTime @default(now())
+
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  booking      Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  issuedByUser User?         @relation("InvoiceIssuedBy", fields: [issuedByUserId], references: [id], onDelete: SetNull)
+  lines        InvoiceLine[]
+
+  @@unique([organizationId, invoiceNumber])
+  @@index([organizationId])
+}
+
+model InvoiceLine {
+  id String @id @default(cuid())
+  /// Carried here too, so the rule that every tenant-owned row has an organizationId
+  /// holds without exception and a direct query can still be scoped.
+  organizationId String
+  invoiceId      String
+  description  String
+  /// Service accounting code. 9966 covers renting transport vehicles.
+  sacCode      String?
+  quantity     Decimal @db.Decimal(12, 2)
+  unitAmount   Decimal @db.Decimal(12, 2)
+  taxableValue Decimal @db.Decimal(12, 2)
+  taxable      Boolean @default(true)
+  cgstRate     Decimal @db.Decimal(5, 2)
+  cgstAmount   Decimal @db.Decimal(12, 2)
+  sgstRate     Decimal @db.Decimal(5, 2)
+  sgstAmount   Decimal @db.Decimal(12, 2)
+  lineTotal    Decimal @db.Decimal(12, 2)
+  position     Int     @default(0)
+
+  invoice      Invoice      @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+  @@index([organizationId])
+}
+
 model Customer {
   id             String   @id @default(cuid())
   organizationId String
@@ -310,6 +389,7 @@ model Booking {
   createdByUser User?           @relation("BookingCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
   charges       BookingCharge[]
   payments      Payment[]
+  invoice       Invoice?
 
   @@unique([organizationId, bookingNumber])
   @@index([organizationId])

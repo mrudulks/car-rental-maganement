@@ -21,7 +21,7 @@
     "test": "npm run db:migrate:test && vitest run",
     "test:watch": "vitest",
     "postinstall": "prisma generate",
-    "test:e2e": "npm run seed && node e2e/smoke.mjs && npm run seed && node e2e/fleet.mjs && npm run seed && node e2e/bookings.mjs && npm run seed && node e2e/lifecycle.mjs && npm run seed && node e2e/customers.mjs && npm run seed && node e2e/billing.mjs && node e2e/audit.mjs",
+    "test:e2e": "npm run seed && node e2e/smoke.mjs && npm run seed && node e2e/fleet.mjs && npm run seed && node e2e/bookings.mjs && npm run seed && node e2e/lifecycle.mjs && npm run seed && node e2e/customers.mjs && npm run seed && node e2e/billing.mjs && npm run seed && node e2e/invoice.mjs && node e2e/audit.mjs",
     "test:a11y": "node e2e/audit.mjs"
   },
   "dependencies": {

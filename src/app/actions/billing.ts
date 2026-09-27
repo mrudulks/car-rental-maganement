@@ -11,6 +11,7 @@ import {
   updateGstSettings,
   BillingError,
 } from '@/server/modules/billing/service'
+import { issueInvoice } from '@/server/modules/billing/invoice'
 
 export type BillingFormState = {
   error?: string
@@ -140,4 +141,17 @@ export async function saveGstSettingsAction(
 
   refresh()
   return { ok: true }
+}
+
+export async function issueInvoiceAction(bookingId: string): Promise<{ error?: string }> {
+  const auth = await requireAuth()
+  try {
+    await issueInvoice(auth, bookingId)
+  } catch (error) {
+    if (error instanceof BillingError) return { error: error.message }
+    if (error instanceof ForbiddenError) return { error: 'Your role does not allow that.' }
+    throw error
+  }
+  refresh()
+  return {}
 }

@@ -141,3 +141,25 @@ body {
     color: var(--color-ink);
   }
 }
+
+/* The invoice is the only thing meant to reach paper. */
+@media print {
+  body {
+    background: #fff;
+  }
+
+  /* The sidebar, the phone bar and anything marked print:hidden drop away. */
+  #app-sidebar,
+  #app-sidebar + div,
+  header.lg\:hidden {
+    display: none !important;
+  }
+
+  main {
+    padding: 0 !important;
+  }
+
+  @page {
+    margin: 14mm;
+  }
+}

@@ -4,11 +4,13 @@ import { requireAuth } from '@/server/auth/dal'
 import { can } from '@/server/auth/permissions'
 import { getBooking, distanceCovered } from '@/server/modules/bookings/service'
 import { getBill } from '@/server/modules/billing/service'
+import { getInvoiceForBooking } from '@/server/modules/billing/invoice'
 import { RATE_LABELS } from '@/server/modules/bookings/schema'
 import { Plate, formatMoney } from '@/components/ui'
 import { BookingStatusPill, formatWhen } from '@/components/booking-ui'
 import { CancelBooking } from './cancel-booking'
 import { Bill } from './bill'
+import { InvoiceActions } from './invoice-actions'
 
 export const metadata = { title: 'Booking — Fleetdesk' }
 
@@ -18,7 +20,10 @@ export default async function BookingPage(props: PageProps<'/bookings/[id]'>) {
   const booking = await getBooking(auth, id)
   if (!booking) notFound()
 
-  const bill = can(auth.user.role, 'payment:read') ? await getBill(auth, booking.id) : null
+  const mayBill = can(auth.user.role, 'payment:read')
+  const [bill, invoice] = mayBill
+    ? await Promise.all([getBill(auth, booking.id), getInvoiceForBooking(auth, booking.id)])
+    : [null, null]
 
   return (
     <div className="max-w-2xl">
@@ -121,6 +126,27 @@ export default async function BookingPage(props: PageProps<'/bookings/[id]'>) {
           canRefund={can(auth.user.role, 'payment:refund')}
           cancelled={booking.status === 'CANCELLED'}
         />
+      ) : null}
+
+      {bill && bill.charges.length > 0 && booking.status !== 'CANCELLED' ? (
+        <section className="mt-6 rounded-xl border border-line bg-paper p-5">
+          <h2 className="font-semibold tracking-tight">
+            {invoice ? 'Invoice issued' : 'Give the customer their bill'}
+          </h2>
+          <p className="mt-1 max-w-prose text-[15px] text-muted">
+            {invoice
+              ? 'Open it to print or save a PDF. Once issued, the bill can no longer be changed.'
+              : 'Issuing produces a numbered GST invoice you can print or save as a PDF. The bill is frozen at that point.'}
+          </p>
+          <div className="mt-4">
+            <InvoiceActions
+              bookingId={booking.id}
+              hasInvoice={Boolean(invoice)}
+              invoiceNumber={invoice?.invoiceNumber ?? null}
+              canIssue={can(auth.user.role, 'invoice:issue')}
+            />
+          </div>
+        </section>
       ) : null}
 
       {booking.status === 'RESERVED' ? (
