@@ -8,6 +8,9 @@ import { NoAccess } from '@/components/no-access'
 import { Plate } from '@/components/ui'
 import { formatWhen } from '@/components/booking-ui'
 import { HandoverForm } from '../handover-form'
+import { MediaCaptureCard } from '../media-capture'
+import { listMedia, storageConfigured } from '@/server/modules/media/service'
+import { MediaGallery } from '../media-gallery'
 
 export const metadata = { title: 'Hand over keys — Fleetdesk' }
 
@@ -31,6 +34,7 @@ export default async function CheckOutPage(props: PageProps<'/bookings/[id]/chec
   })
 
   const action = checkOutAction.bind(null, booking.id)
+  const media = await listMedia(auth, booking.id)
 
   return (
     <div className="max-w-2xl">
@@ -43,6 +47,16 @@ export default async function CheckOutPage(props: PageProps<'/bookings/[id]/chec
         {booking.vehicle.make} {booking.vehicle.model} · {booking.customer.fullName} · due back{' '}
         {formatWhen(booking.endAt)}
       </p>
+
+      <div className="mt-8">
+        <MediaCaptureCard
+          bookingId={booking.id}
+          phaseLabel="hand-over"
+          storageReady={storageConfigured()}
+        />
+      </div>
+
+      <MediaGallery media={media} />
 
       <HandoverForm
         action={action}

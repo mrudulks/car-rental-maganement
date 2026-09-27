@@ -25,6 +25,20 @@ On the **app** service, under Variables:
 | `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` — reference the database service, do not paste a literal URL |
 | `SESSION_SECRET` | A fresh 32-byte secret, **not** the one from your local `.env` |
 
+For hand-over photos and video, also set the four R2 variables below. Leave them unset
+and the capture UI stays hidden rather than erroring, so the rest of the app works
+without them.
+
+| Variable | Where it comes from |
+| --- | --- |
+| `R2_ACCOUNT_ID` | Cloudflare dashboard → R2 → account ID |
+| `R2_ACCESS_KEY_ID` | R2 → Manage API tokens → create a token with object read and write |
+| `R2_SECRET_ACCESS_KEY` | Shown once when the token is created |
+| `R2_BUCKET` | The bucket name you created |
+
+Keep the bucket **private**. Files are served through short-lived signed links, so
+nothing is reachable by a guessable address.
+
 Generate the secret with:
 
 ```bash

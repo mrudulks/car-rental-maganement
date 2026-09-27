@@ -62,6 +62,16 @@ enum RateType {
   MONTHLY
 }
 
+enum HandoverPhase {
+  CHECK_OUT
+  CHECK_IN
+}
+
+enum MediaKind {
+  IMAGE
+  VIDEO
+}
+
 enum ServiceStatus {
   SCHEDULED
   COMPLETED
@@ -132,6 +142,7 @@ model Organization {
   invoices     Invoice[]
   invoiceLines InvoiceLine[]
   services     ServiceSchedule[]
+  media        HandoverMedia[]
 }
 
 model Branch {
@@ -173,6 +184,7 @@ model User {
   takenPayments   Payment[]       @relation("PaymentReceivedBy")
   issuedInvoices  Invoice[]         @relation("InvoiceIssuedBy")
   createdServices ServiceSchedule[] @relation("ServiceCreatedBy")
+  uploadedMedia   HandoverMedia[]   @relation("MediaUploadedBy")
 
   @@index([organizationId])
   @@index([branchId])
@@ -362,6 +374,35 @@ model ServiceSchedule {
   @@index([organizationId, status])
 }
 
+/// Photographs and video of the vehicle at hand-over and at return.
+///
+/// This is evidence, so it is append-only: a database trigger refuses every UPDATE and
+/// DELETE on this table. Something a person could quietly edit afterwards would settle
+/// no dispute at all.
+model HandoverMedia {
+  id             String        @id @default(cuid())
+  organizationId String
+  bookingId      String
+  phase          HandoverPhase
+  kind           MediaKind
+  /// Object key in the bucket. The file itself never touches this database.
+  storageKey     String        @unique
+  contentType    String
+  sizeBytes      Int
+  originalName   String?
+  caption        String?
+
+  uploadedByUserId String?
+  createdAt        DateTime @default(now()) @db.Timestamptz(3)
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  booking        Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  uploadedByUser User?        @relation("MediaUploadedBy", fields: [uploadedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([bookingId, phase])
+}
+
 model Customer {
   id             String   @id @default(cuid())
   organizationId String
@@ -425,6 +466,7 @@ model Booking {
   charges       BookingCharge[]
   payments      Payment[]
   invoice       Invoice?
+  media         HandoverMedia[]
 
   @@unique([organizationId, bookingNumber])
   @@index([organizationId])

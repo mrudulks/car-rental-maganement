@@ -11,6 +11,8 @@ import { BookingStatusPill, formatWhen } from '@/components/booking-ui'
 import { CancelBooking } from './cancel-booking'
 import { Bill } from './bill'
 import { InvoiceActions } from './invoice-actions'
+import { MediaGallery } from './media-gallery'
+import { listMedia } from '@/server/modules/media/service'
 
 export const metadata = { title: 'Booking — Fleetdesk' }
 
@@ -20,6 +22,7 @@ export default async function BookingPage(props: PageProps<'/bookings/[id]'>) {
   const booking = await getBooking(auth, id)
   if (!booking) notFound()
 
+  const media = await listMedia(auth, booking.id)
   const mayBill = can(auth.user.role, 'payment:read')
   const [bill, invoice] = mayBill
     ? await Promise.all([getBill(auth, booking.id), getInvoiceForBooking(auth, booking.id)])
@@ -117,6 +120,8 @@ export default async function BookingPage(props: PageProps<'/bookings/[id]'>) {
           </dl>
         </section>
       ) : null}
+
+      <MediaGallery media={media} />
 
       {bill ? (
         <Bill

@@ -21,10 +21,12 @@
     "test": "npm run db:migrate:test && vitest run",
     "test:watch": "vitest",
     "postinstall": "prisma generate",
-    "test:e2e": "npm run seed && node e2e/smoke.mjs && npm run seed && node e2e/fleet.mjs && npm run seed && node e2e/bookings.mjs && npm run seed && node e2e/lifecycle.mjs && npm run seed && node e2e/customers.mjs && npm run seed && node e2e/billing.mjs && npm run seed && node e2e/invoice.mjs && npm run seed && node e2e/calendar.mjs && node e2e/audit.mjs",
+    "test:e2e": "npm run seed && node e2e/smoke.mjs && npm run seed && node e2e/fleet.mjs && npm run seed && node e2e/bookings.mjs && npm run seed && node e2e/lifecycle.mjs && npm run seed && node e2e/customers.mjs && npm run seed && node e2e/billing.mjs && npm run seed && node e2e/invoice.mjs && npm run seed && node e2e/calendar.mjs && npm run seed && node e2e/media.mjs && node e2e/audit.mjs",
     "test:a11y": "node e2e/audit.mjs"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1141.0",
+    "@aws-sdk/s3-request-presigner": "^3.1141.0",
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.10.0",
     "bcryptjs": "^3.0.3",

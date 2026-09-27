@@ -25,6 +25,7 @@ const SCOPE_FIELD: Record<string, string> = {
   Invoice: 'organizationId',
   InvoiceLine: 'organizationId',
   ServiceSchedule: 'organizationId',
+  HandoverMedia: 'organizationId',
 }
 
 const WHERE_OPS = new Set([

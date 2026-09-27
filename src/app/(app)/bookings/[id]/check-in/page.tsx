@@ -8,6 +8,9 @@ import { NoAccess } from '@/components/no-access'
 import { Plate } from '@/components/ui'
 import { formatWhen } from '@/components/booking-ui'
 import { HandoverForm } from '../handover-form'
+import { MediaCaptureCard } from '../media-capture'
+import { listMedia, storageConfigured } from '@/server/modules/media/service'
+import { MediaGallery } from '../media-gallery'
 
 export const metadata = { title: 'Take the vehicle back — Fleetdesk' }
 
@@ -25,6 +28,7 @@ export default async function CheckInPage(props: PageProps<'/bookings/[id]/check
   if (booking.status !== 'ACTIVE') redirect(`/bookings/${id}`)
 
   const action = checkInAction.bind(null, booking.id)
+  const media = await listMedia(auth, booking.id)
   const overdue = booking.endAt < new Date()
 
   return (
@@ -43,6 +47,16 @@ export default async function CheckInPage(props: PageProps<'/bookings/[id]/check
           This was due back {formatWhen(booking.endAt)}.
         </p>
       ) : null}
+
+      <div className="mt-8">
+        <MediaCaptureCard
+          bookingId={booking.id}
+          phaseLabel="return"
+          storageReady={storageConfigured()}
+        />
+      </div>
+
+      <MediaGallery media={media} />
 
       <HandoverForm
         action={action}
